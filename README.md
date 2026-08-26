@@ -1,23 +1,23 @@
-# Zinnia 2026 &mdash; Standalone Admin Portal
+# Zinnia 2026 &mdash; Admin Portal
 
-Dedicated Command Center and Backend for Zinnia 2026 Symposium Organizers.
+Dedicated Command Center & Management Portal for Zinnia 2026 Symposium Organizers.
 
 ## Project Structure
-- **`backend/`**: Python Flask API (Port 5050) for verification, check-in, and stats.
-- **`frontend/`**: React + Vite Admin Dashboard (Port 5174) with camera scanner and payment hub.
+- **`src/`**: React 18 + Vite + Tailwind Admin Dashboard & Camera QR Scanner (Port `5174`).
+- **`backend/`**: Python Flask API (Port `5050`) for checkpoints, attendance, and payment verification.
 
-## Quick Start
+## Getting Started
 
-### 1. Launch Backend:
+### 1. Run Admin Frontend
+```bash
+npm install
+npm run dev
+```
+*Access the portal at `http://localhost:5174`.*
+
+### 2. Run Admin Backend
 ```bash
 cd backend
 python app.py
 ```
-
-### 2. Launch Frontend:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-Access the Admin Portal at `http://localhost:5174`.
+*API runs at `http://localhost:5050`.*
