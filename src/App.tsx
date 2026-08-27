@@ -1,15 +1,15 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AdminNavbar } from './components/AdminNavbar';
-import { AdminDashboard } from './pages/AdminDashboard';
-import { EntryCheckin } from './pages/EntryCheckin';
-import { EventCheckin } from './pages/EventCheckin';
-import { FoodCheckin } from './pages/FoodCheckin';
-import { PaymentVerification } from './pages/PaymentVerification';
-import { ParticipantsList } from './pages/ParticipantsList';
+import { AdminDashboardPage as AdminDashboard } from './pages/AdminDashboard';
+import { EntryCheckinPage as EntryCheckin } from './pages/EntryCheckin';
+import { EventCheckinPage as EventCheckin } from './pages/EventCheckin';
+import { FoodCheckinPage as FoodCheckin } from './pages/FoodCheckin';
+import { PaymentVerificationPage as PaymentVerification } from './pages/PaymentVerification';
+import { ParticipantsListPage as ParticipantsList } from './pages/ParticipantsList';
 import { QRScannerPage } from './pages/QRScanner';
-import { CertificateAdmin } from './pages/CertificateAdmin';
-import { ReportsExport } from './pages/ReportsExport';
+import { CertificateAdminPage as CertificateAdmin } from './pages/CertificateAdmin';
+import { ReportsExportPage as ReportsExport } from './pages/ReportsExport';
 
 export default function App() {
   return (

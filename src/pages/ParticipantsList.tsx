@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { store } from '../../services/store';
+import { store } from '../services/store';
 import { Team, TeamMember } from '@packages/types/src';
 import { 
   Users, 
@@ -18,7 +18,7 @@ import {
   QrCode,
   AlertCircle
 } from 'lucide-react';
-import { exportParticipantsExcel } from '../../services/exportService';
+import { exportParticipantsExcel } from '../services/exportService';
 
 export const ParticipantsListPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,9 +70,9 @@ export const ParticipantsListPage: React.FC = () => {
 
   const totalMembers = teams.reduce((acc, t) => acc + (t.members?.length || 0), 0);
 
-  const handleDeleteTeam = (teamId: string, teamName: string) => {
+  const handleDeleteTeam = async (teamId: string, teamName: string) => {
     if (window.confirm(`Are you sure you want to remove team "${teamName}" (${teamId}) and all associated members?`)) {
-      store.deleteParticipant(teamId);
+      await store.deleteParticipant(teamId);
       setTeams(store.getTeams());
     }
   };

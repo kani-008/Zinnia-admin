@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { store } from '../../services/store';
+import { store } from '../services/store';
 import { QrCode, Search, CheckCircle2, AlertTriangle, Utensils, Zap, Shield, Camera } from 'lucide-react';
 import { CameraQRScannerModal } from '../components/CameraQRScannerModal';
 

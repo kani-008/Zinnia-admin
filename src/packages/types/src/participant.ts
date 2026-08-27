@@ -1,3 +1,5 @@
+export type ClearanceLevel = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3' | 'SECRET' | 'TOP_SECRET' | string;
+
 export interface TeamMember {
   id: string; // Unique Member UUID / ID e.g. "MEM-ZIN26-1"
   team_id: string; // References Team.team_id
@@ -7,7 +9,7 @@ export interface TeamMember {
   is_leader: boolean;
   
   // Secure Passport Token (encoded inside QR code)
-  passport_token: string;
+  passport_token?: string;
   passport_issued_at?: string;
   passport_sent_at?: string;
   
@@ -40,6 +42,8 @@ export interface Team {
   year: 'I' | 'II' | 'III' | 'IV' | 'PG' | string;
   registered_events: string[];
   payment: boolean;
+  payment_status?: string;
+  utr_number?: string;
   
   members?: TeamMember[];
   

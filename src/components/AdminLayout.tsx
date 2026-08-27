@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { store } from '../../services/store';
+import { store } from '../services/store';
 import { AdminRole } from '@packages/types/src';
 import { 
   Zap, 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { store } from '../../services/store';
-import { certificateService } from '../../services/certificateService';
+import { store } from '../services/store';
+import { certificateService } from '../services/certificateService';
 import { Award, CheckCircle2, Trophy } from 'lucide-react';
 
 export const CertificateAdminPage: React.FC = () => {

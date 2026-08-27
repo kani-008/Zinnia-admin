@@ -6,7 +6,8 @@ interface CameraQRScannerModalProps {
   isOpen: boolean;
   title: string;
   subtitle?: string;
-  onScan: (decodedText: string) => void;
+  onScan?: (decodedText: string) => void;
+  onScanSuccess?: (decodedText: string) => void;
   onClose: () => void;
 }
 
@@ -15,6 +16,7 @@ export const CameraQRScannerModal: React.FC<CameraQRScannerModalProps> = ({
   title,
   subtitle,
   onScan,
+  onScanSuccess,
   onClose
 }) => {
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
@@ -44,7 +46,9 @@ export const CameraQRScannerModal: React.FC<CameraQRScannerModalProps> = ({
   const handleSuccess = (decodedText: string) => {
     playBeep();
     stopScanner().then(() => {
-      onScan(decodedText.trim());
+      const text = decodedText.trim();
+      if (onScan) onScan(text);
+      if (onScanSuccess) onScanSuccess(text);
       onClose();
     });
   };

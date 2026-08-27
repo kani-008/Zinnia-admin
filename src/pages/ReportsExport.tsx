@@ -8,8 +8,8 @@ import {
   exportAttendanceExcel, 
   exportFoodExcel, 
   exportEventsReportExcel 
-} from '../../services/exportService';
-import { store } from '../../services/store';
+} from '../services/exportService';
+import { store } from '../services/store';
 
 export const ReportsExportPage: React.FC = () => {
   const [participants, setParticipants] = useState(store.getParticipants());

@@ -33,6 +33,10 @@ class ZinniaStore {
     this.cleanLegacyStorage();
     this.syncFromSupabase();
     this.setupRealtimeSubscription();
+    this.setupBroadcastSync();
+    if (typeof window !== 'undefined') {
+      setInterval(() => this.syncFromSupabase(), 4000);
+    }
   }
 
   private cleanLegacyStorage() {
@@ -41,6 +45,43 @@ class ZinniaStore {
         localStorage.removeItem(k);
       });
     } catch {}
+  }
+
+  private setupBroadcastSync() {
+    try {
+      const bc = new BroadcastChannel('zin26_live_sync_channel');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'TEAM_REGISTERED' || event.data?.type === 'REGISTRATION_UPDATED') {
+          const { team, members } = event.data;
+          if (team) {
+            const currentTeams = this.getStorage<Team[]>(STORAGE_KEYS.TEAMS, []);
+            if (!currentTeams.some(t => t.team_id === team.team_id)) {
+              currentTeams.unshift(team);
+              this.setStorage(STORAGE_KEYS.TEAMS, currentTeams);
+            }
+          }
+          if (members && Array.isArray(members)) {
+            const currentMembers = this.getStorage<TeamMember[]>(STORAGE_KEYS.MEMBERS, []);
+            members.forEach((m: any) => {
+              if (!currentMembers.some(cm => cm.id === m.id)) {
+                currentMembers.push(m);
+              }
+            });
+            this.setStorage(STORAGE_KEYS.MEMBERS, currentMembers);
+          }
+          this.notifySubscribers();
+          this.syncFromSupabase();
+        }
+      };
+    } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', () => this.syncFromSupabase());
+      window.addEventListener('storage', (e) => {
+        this.notifySubscribers();
+        this.syncFromSupabase();
+      });
+    }
   }
 
   subscribe(listener: () => void): () => void {
@@ -83,59 +124,49 @@ class ZinniaStore {
         .select('*')
         .order('created_at', { ascending: false });
 
-      // Fallback: If participants table exists from earlier, also check participants
-      let teamsToStore: Team[] = [];
-      if (!tErr && dbTeams) {
-        teamsToStore = dbTeams;
-      }
-
       // 2. Fetch live team_members
       const { data: dbMembers, error: mErr } = await supabase
         .from('team_members')
         .select('*')
         .order('created_at', { ascending: true });
 
-      let membersToStore: TeamMember[] = [];
-      if (!mErr && dbMembers) {
-        membersToStore = dbMembers;
+      const currentTeams = this.getStorage<Team[]>(STORAGE_KEYS.TEAMS, []);
+      const currentMembers = this.getStorage<TeamMember[]>(STORAGE_KEYS.MEMBERS, []);
+
+      let mergedTeams: Team[] = [...currentTeams];
+      let mergedMembers: TeamMember[] = [...currentMembers];
+
+      if (!tErr && dbTeams && dbTeams.length > 0) {
+        dbTeams.forEach(dbt => {
+          const idx = mergedTeams.findIndex(t => t.team_id === dbt.team_id);
+          if (idx >= 0) {
+            mergedTeams[idx] = { ...mergedTeams[idx], ...dbt };
+          } else {
+            mergedTeams.push(dbt);
+          }
+        });
       }
 
-      // If database has participants table but not teams yet (seamless transition)
-      if (teamsToStore.length === 0 && membersToStore.length === 0) {
-        const { data: legacyParts } = await supabase.from('participants').select('*');
-        if (legacyParts && legacyParts.length > 0) {
-          legacyParts.forEach(p => {
-            const teamId = p.agent_id;
-            const teamObj: Team = {
-              team_id: teamId,
-              team_name: p.name,
-              college: p.college,
-              department: p.department,
-              year: p.year,
-              registered_events: p.registered_events || [],
-              payment: p.payment || false,
-              created_at: p.created_at
-            };
-            const memberObj: TeamMember = {
-              id: `${teamId}-M1`,
-              team_id: teamId,
-              name: p.name,
-              email: p.email,
-              phone: p.phone,
-              is_leader: true,
-              band_id: p.band_id || undefined,
-              food_collected: p.food_collected || false,
-              food_collected_at: p.food_collected_at,
-              created_at: p.created_at
-            };
-            teamsToStore.push(teamObj);
-            membersToStore.push(memberObj);
-          });
-        }
+      if (!mErr && dbMembers && dbMembers.length > 0) {
+        dbMembers.forEach(dbm => {
+          const idx = mergedMembers.findIndex(m => m.id === dbm.id);
+          if (idx >= 0) {
+            mergedMembers[idx] = { ...mergedMembers[idx], ...dbm };
+          } else {
+            mergedMembers.push(dbm);
+          }
+        });
       }
 
-      this.setStorage(STORAGE_KEYS.TEAMS, teamsToStore);
-      this.setStorage(STORAGE_KEYS.MEMBERS, membersToStore);
+
+
+      mergedTeams = mergedTeams.map(t => ({
+        ...t,
+        members: mergedMembers.filter(m => m.team_id === t.team_id)
+      }));
+
+      this.setStorage(STORAGE_KEYS.TEAMS, mergedTeams);
+      this.setStorage(STORAGE_KEYS.MEMBERS, mergedMembers);
 
       // 3. Fetch live events
       const { data: dbEvents, error: eErr } = await supabase
@@ -503,7 +534,7 @@ class ZinniaStore {
 
     if (isSupabaseConfigured()) {
       try {
-        await supabase.from('teams').insert([{
+        const { error: teamErr } = await supabase.from('teams').insert([{
           team_id: newTeam.team_id,
           team_name: newTeam.team_name,
           college: newTeam.college,
@@ -514,27 +545,31 @@ class ZinniaStore {
           payment_status: 'AWAITING_PAYMENT'
         }]);
 
-        const memberRows = newMembers.map(m => ({
-          id: m.id,
-          team_id: m.team_id,
-          name: m.name,
-          email: m.email,
-          phone: m.phone,
-          is_leader: m.is_leader,
-          passport_token: m.passport_token,
-          passport_issued_at: m.passport_issued_at,
-          food_collected: false
-        }));
-        await supabase.from('team_members').insert(memberRows);
-
-        if (teamData.registered_events.length > 0) {
-          const regRows = teamData.registered_events.map(eventId => ({
-            team_id: newTeam.team_id,
-            event_id: eventId,
-            team_name: newTeam.team_name,
-            registered_at: now
+        if (teamErr) {
+          console.warn('Supabase teams insert warning (RLS/Permissions):', teamErr.message);
+        } else {
+          const memberRows = newMembers.map(m => ({
+            id: m.id,
+            team_id: m.team_id,
+            name: m.name,
+            email: m.email,
+            phone: m.phone,
+            is_leader: m.is_leader,
+            passport_token: m.passport_token,
+            passport_issued_at: m.passport_issued_at,
+            food_collected: false
           }));
-          await supabase.from('event_registrations').insert(regRows);
+          await supabase.from('team_members').insert(memberRows);
+
+          if (teamData.registered_events.length > 0) {
+            const regRows = teamData.registered_events.map(eventId => ({
+              team_id: newTeam.team_id,
+              event_id: eventId,
+              team_name: newTeam.team_name,
+              registered_at: now
+            }));
+            await supabase.from('event_registrations').insert(regRows);
+          }
         }
       } catch (e) {
         console.warn('Supabase team registration error:', e);
@@ -1085,12 +1120,30 @@ class ZinniaStore {
     return this.getStorage<EventRegistration[]>(STORAGE_KEYS.REGISTRATIONS, []);
   }
 
+  assignPrizePosition(eventId: string, targetId: string, position: 1 | 2 | 3 | null, isTeam = false): void {
+    const regs = this.getEventRegistrations();
+    let reg = regs.find(r => r.event_id === eventId && (r.agent_id === targetId || r.team_members?.includes(targetId)));
+    if (!reg) {
+      reg = {
+        agent_id: targetId,
+        event_id: eventId,
+        position,
+        registered_at: new Date().toISOString()
+      };
+      regs.push(reg);
+    } else {
+      reg.position = position;
+    }
+    this.setStorage(STORAGE_KEYS.REGISTRATIONS, regs);
+    this.notifySubscribers();
+  }
+
   // --- ATTENDANCE ---
   getAttendance(): AttendanceRecord[] {
     return this.getStorage<AttendanceRecord[]>(STORAGE_KEYS.ATTENDANCE, []);
   }
 
-  deleteParticipant(id: string): void {
+  async deleteParticipant(id: string): Promise<void> {
     const teams = this.getTeams().filter(t => t.team_id !== id && !t.members?.some(m => m.id === id));
     const members = this.getTeamMembers().filter(m => m.id !== id && m.team_id !== id);
 
@@ -1098,10 +1151,22 @@ class ZinniaStore {
     this.setStorage(STORAGE_KEYS.MEMBERS, members);
 
     if (isSupabaseConfigured()) {
-      supabase.from('teams').delete().eq('team_id', id).then();
-      supabase.from('team_members').delete().eq('id', id).then();
-      supabase.from('team_members').delete().eq('team_id', id).then();
-      supabase.from('hand_bands').delete().eq('team_id', id).then();
+      try {
+        // Delete child table records first to prevent Foreign Key constraint conflicts (409 Conflict)
+        await supabase.from('event_registrations').delete().eq('team_id', id);
+        await supabase.from('team_payments').delete().eq('team_id', id);
+        await supabase.from('hand_bands').delete().eq('team_id', id);
+        await supabase.from('hand_bands').delete().eq('member_id', id);
+        await supabase.from('attendance').delete().eq('team_id', id);
+        await supabase.from('attendance').delete().eq('member_id', id);
+        await supabase.from('team_members').delete().eq('team_id', id);
+        await supabase.from('team_members').delete().eq('id', id);
+
+        // Delete parent team row last
+        await supabase.from('teams').delete().eq('team_id', id);
+      } catch (err) {
+        console.warn('Supabase delete team error:', err);
+      }
     }
 
     this.notifySubscribers();

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { store } from '../../services/store';
+import { store } from '../services/store';
 import { 
   Users, 
   DoorOpen, 
