@@ -1,5 +1,6 @@
-export type AdminRole = 
+﻿export type AdminRole = 
   | 'SUPER_ADMIN' 
+  | 'TREASURER'
   | 'EVENT_ADMIN' 
   | 'ENTRY_STAFF' 
   | 'FOOD_STAFF' 

@@ -22,7 +22,8 @@ const STORAGE_KEYS = {
   ATTENDANCE: 'zin26_live_attendance_v2',
   HAND_BANDS: 'zin26_live_hand_bands_v2',
   CURRENT_TEAM: 'zin26_current_team_v2',
-  ADMIN_ROLE: 'zin26_admin_role_v2'
+  ADMIN_ROLE: 'zin26_admin_role_v2',
+  AUTH_USER: 'zin26_auth_user_v2'
 };
 
 class ZinniaStore {
@@ -1059,7 +1060,7 @@ class ZinniaStore {
     payment_status?: string;
   }> {
     try {
-      const res = await fetch('/api/admin/payment/verify', {
+      const res = await fetch('/api/admin/payments/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ team_id: teamId, admin_id: adminId })
@@ -1078,7 +1079,7 @@ class ZinniaStore {
     payment_status?: string;
   }> {
     try {
-      const res = await fetch('/api/admin/payment/reject', {
+      const res = await fetch('/api/admin/payments/reject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ team_id: teamId, admin_id: adminId, rejection_reason: rejectionReason })
@@ -1093,7 +1094,7 @@ class ZinniaStore {
 
   async listAdminPaymentsApi(statusFilter?: string): Promise<any[]> {
     try {
-      const url = statusFilter ? `/api/admin/payments/list?status=${statusFilter}` : '/api/admin/payments/list';
+      const url = statusFilter ? `/api/admin/payments/list?status=${statusFilter}` : '/api/admin/payments';
       const res = await fetch(url);
       const data = await res.json();
       return data.payments || [];
@@ -1187,6 +1188,48 @@ class ZinniaStore {
 
   setAdminRole(role: AdminRole): void {
     this.setStorage(STORAGE_KEYS.ADMIN_ROLE, role);
+  }
+
+
+
+  // --- AUTHENTICATION ---
+  async loginAdminApi(email: string, password: string): Promise<{
+    success: boolean;
+    message?: string;
+    user?: any;
+    token?: string;
+  }> {
+    try {
+      const res = await fetch('/api/admin/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        this.setStorage(STORAGE_KEYS.AUTH_USER, data.user);
+        if (data.user.role) {
+          this.setAdminRole(data.user.role);
+        }
+        this.notifySubscribers();
+      }
+      return data;
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Authentication failed.' };
+    }
+  }
+
+  logoutAdmin(): void {
+    localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
+    this.notifySubscribers();
+  }
+
+  getAuthUser(): any {
+    return this.getStorage(STORAGE_KEYS.AUTH_USER, null);
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.getAuthUser();
   }
 }
 

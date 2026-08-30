@@ -1,9 +1,19 @@
-from flask import request, jsonify
+﻿from flask import request, jsonify
 from services.admin_service import get_dashboard_stats
 from services.checkin_service import process_entry_checkin, process_event_checkin, process_food_checkin, lookup_member
 from services.payment_service import list_all_payments, verify_payment, reject_payment
+from services.auth_service import authenticate_admin
 
 class AdminController:
+    @staticmethod
+    def login():
+        data = request.get_json(silent=True) or {}
+        email = data.get("email", "")
+        password = data.get("password", "")
+        res = authenticate_admin(email, password)
+        status_code = 200 if res.get("success") else 401
+        return jsonify(res), status_code
+
     @staticmethod
     def get_stats():
         stats = get_dashboard_stats()
@@ -45,7 +55,7 @@ class AdminController:
     def verify_payment_endpoint():
         data = request.get_json(silent=True) or {}
         team_id = data.get("team_id")
-        admin_name = data.get("admin_name", "Admin")
+        admin_name = data.get("admin_name") or data.get("admin_id") or "Treasurer"
         if not team_id:
             return jsonify({"success": False, "error": "Missing team_id"}), 400
         return jsonify(verify_payment(team_id, admin_name))
@@ -54,7 +64,7 @@ class AdminController:
     def reject_payment_endpoint():
         data = request.get_json(silent=True) or {}
         team_id = data.get("team_id")
-        reason = data.get("reason", "Payment verification rejected")
+        reason = data.get("reason") or data.get("rejection_reason") or "Payment verification rejected"
         if not team_id:
             return jsonify({"success": False, "error": "Missing team_id"}), 400
         return jsonify(reject_payment(team_id, reason))

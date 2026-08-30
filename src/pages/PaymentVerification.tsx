@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { store } from '../services/store';
 import { 
   CreditCard, 
@@ -10,9 +10,10 @@ import {
   RefreshCw, 
   Copy, 
   Check, 
-  Filter,
+  ExternalLink,
+  Coins,
   Send,
-  ExternalLink
+  MailCheck
 } from 'lucide-react';
 
 export const PaymentVerificationPage: React.FC = () => {
@@ -45,16 +46,18 @@ export const PaymentVerificationPage: React.FC = () => {
   };
 
   const handleVerify = async (teamId: string, teamName: string) => {
-    if (!window.confirm(`Verify and approve payment for team "${teamName}" (${teamId})? This will release their Digital Passports.`)) {
+    if (!window.confirm(`Approve payment for team "${teamName}" (${teamId})?\n\nThis will confirm received funds against your bank statement, update the database, and immediately dispatch official Entry QR Passes to the participant's email from zinnia2026@gcee.ac.in.`)) {
       return;
     }
 
     setProcessingId(teamId);
-    const res = await store.verifyAdminPaymentApi(teamId);
+    const authUser = store.getAuthUser();
+    const adminName = authUser?.name || 'Treasurer';
+    const res = await store.verifyAdminPaymentApi(teamId, adminName);
     setProcessingId(null);
 
     if (res.success) {
-      setActionFeedback(`✓ Verified payment for ${teamName} (${teamId}). Digital Passports released!`);
+      setActionFeedback(`✓ Approved payment for ${teamName} (${teamId}). Entry QR pass emails successfully dispatched!`);
       await loadPayments();
     } else {
       setActionFeedback(`✗ Verification failed: ${res.message}`);
@@ -63,7 +66,7 @@ export const PaymentVerificationPage: React.FC = () => {
 
   const handleOpenRejectModal = (payment: any) => {
     setRejectModalTeam(payment);
-    setRejectionReason('Incorrect UTR / amount does not match transaction records.');
+    setRejectionReason('Incorrect UTR reference or amount does not match bank statement credit records.');
   };
 
   const handleConfirmReject = async () => {
@@ -72,12 +75,14 @@ export const PaymentVerificationPage: React.FC = () => {
     const teamName = rejectModalTeam.teams?.team_name || teamId;
 
     setProcessingId(teamId);
-    const res = await store.rejectAdminPaymentApi(teamId, rejectionReason);
+    const authUser = store.getAuthUser();
+    const adminName = authUser?.name || 'Treasurer';
+    const res = await store.rejectAdminPaymentApi(teamId, rejectionReason, adminName);
     setProcessingId(null);
     setRejectModalTeam(null);
 
     if (res.success) {
-      setActionFeedback(`✓ Payment marked as REJECTED for ${teamName}. Participant can now resubmit UTR.`);
+      setActionFeedback(`✓ Payment marked as REJECTED for ${teamName}. Participant can now review and resubmit their correct UTR.`);
       await loadPayments();
     } else {
       setActionFeedback(`✗ Rejection update failed: ${res.message}`);
@@ -102,12 +107,17 @@ export const PaymentVerificationPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2 font-sans">
-            <CreditCard className="w-5 h-5 text-indigo-400" />
-            UPI Payment Verification & Audit ({payments.length} Records)
-          </h1>
+          <div className="flex items-center gap-2">
+            <Coins className="w-5 h-5 text-emerald-400" />
+            <h1 className="text-xl font-bold text-white font-sans">
+              Treasurer Audit &amp; Payment Verification
+            </h1>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 font-bold">
+              ₹250 / Head
+            </span>
+          </div>
           <p className="text-xs text-slate-400 mt-1">
-            Review submitted UTR transaction numbers, cross-verify bank credits, and authorize digital passports.
+            Cross-reference bank statement credits against participant UTR reference numbers. Approving automatically dispatches dynamic QR entry passes from <strong className="text-slate-300">zinnia2026@gcee.ac.in</strong>.
           </p>
         </div>
 
@@ -124,9 +134,12 @@ export const PaymentVerificationPage: React.FC = () => {
       </div>
 
       {actionFeedback && (
-        <div className="p-3 bg-slate-900 border border-indigo-500/40 rounded-xl text-xs text-indigo-300 font-mono flex items-center justify-between">
-          <span>{actionFeedback}</span>
-          <button onClick={() => setActionFeedback(null)} className="text-slate-500 hover:text-white cursor-pointer">
+        <div className="p-3.5 bg-slate-900 border border-emerald-500/40 rounded-xl text-xs text-emerald-300 font-mono flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-2">
+            <MailCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{actionFeedback}</span>
+          </div>
+          <button onClick={() => setActionFeedback(null)} className="text-slate-500 hover:text-white cursor-pointer ml-3">
             ✕
           </button>
         </div>
@@ -137,7 +150,7 @@ export const PaymentVerificationPage: React.FC = () => {
         <div className="flex flex-wrap gap-2">
           {[
             { id: 'ALL', label: 'All Payments', count: payments.length },
-            { id: 'PENDING_VERIFICATION', label: 'Pending Review', count: pendingCount, highlight: 'text-amber-400' },
+            { id: 'PENDING_VERIFICATION', label: 'Pending Review', count: pendingCount, highlight: 'text-amber-400 font-bold' },
             { id: 'VERIFIED', label: 'Verified', count: verifiedCount, highlight: 'text-emerald-400' },
             { id: 'REJECTED', label: 'Rejected', count: rejectedCount, highlight: 'text-rose-400' }
           ].map((tab) => (
@@ -158,7 +171,7 @@ export const PaymentVerificationPage: React.FC = () => {
           ))}
         </div>
 
-        <div className="relative min-w-[260px]">
+        <div className="relative min-w-[280px]">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
           <input
             type="text"
@@ -184,8 +197,8 @@ export const PaymentVerificationPage: React.FC = () => {
             <div 
               key={p.team_id}
               className={`p-5 rounded-2xl border transition-all ${
-                isPending ? 'bg-slate-900/90 border-amber-500/50 shadow-lg shadow-amber-950/20' :
-                isVerified ? 'bg-slate-900/70 border-emerald-500/30' :
+                isPending ? 'bg-slate-900/90 border-amber-500/60 shadow-lg shadow-amber-950/20' :
+                isVerified ? 'bg-slate-900/70 border-emerald-500/40' :
                 isRejected ? 'bg-slate-900/70 border-rose-500/30' :
                 'bg-slate-900 border-slate-800'
               }`}
@@ -215,8 +228,8 @@ export const PaymentVerificationPage: React.FC = () => {
                 {/* Amount & UTR Details */}
                 <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
                   <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                    <div className="text-[10px] text-slate-500 uppercase">EXPECTED AMOUNT</div>
-                    <div className="text-sm font-black text-white">₹{p.expected_amount || 0}</div>
+                    <div className="text-[10px] text-slate-500 uppercase">FEE (₹250/HEAD)</div>
+                    <div className="text-sm font-black text-white">₹{p.expected_amount || 250}</div>
                   </div>
 
                   <div className={`p-2.5 rounded-xl border ${
@@ -230,18 +243,18 @@ export const PaymentVerificationPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 min-w-[150px]">
-                    <div className="text-[10px] text-slate-500 uppercase">UTR REFERENCE</div>
+                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 min-w-[170px]">
+                    <div className="text-[10px] text-slate-500 uppercase">BANK UTR / REF NO</div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-cyan-300 text-xs">
-                        {p.utr_number || 'PENDING'}
+                      <span className="font-bold text-cyan-300 text-xs tracking-wider">
+                        {p.utr_number || 'PENDING SUBMISSION'}
                       </span>
                       {p.utr_number && (
                         <button
                           type="button"
                           onClick={() => handleCopyUtr(p.utr_number)}
-                          className="text-slate-500 hover:text-white cursor-pointer"
-                          title="Copy UTR"
+                          className="p-1 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded text-xs transition-colors cursor-pointer"
+                          title="Copy UTR to paste into Netbanking"
                         >
                           {copiedUtr === p.utr_number ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
@@ -257,10 +270,11 @@ export const PaymentVerificationPage: React.FC = () => {
                       type="button"
                       disabled={processingId === p.team_id || !p.utr_number}
                       onClick={() => handleVerify(p.team_id, team.team_name || p.team_id)}
-                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold font-mono text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold font-mono text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed active:translate-x-0.5 active:translate-y-0.5"
+                      title="Confirm statement credit and email QR pass"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>{processingId === p.team_id ? 'Verifying...' : 'VERIFY'}</span>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{processingId === p.team_id ? 'DISPATCHING...' : 'APPROVE & DISPATCH QR'}</span>
                     </button>
                   )}
 
@@ -277,15 +291,21 @@ export const PaymentVerificationPage: React.FC = () => {
                   )}
 
                   {isVerified && (
-                    <a
-                      href={`/passport?id=${p.team_id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold font-mono text-xs rounded-xl flex items-center gap-1.5 transition-colors border border-slate-700"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>VIEW PASSES</span>
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-emerald-400 font-semibold flex items-center gap-1">
+                        <MailCheck className="w-3.5 h-3.5" />
+                        <span>Pass Dispatched</span>
+                      </span>
+                      <a
+                        href={`http://localhost:5173/passport?id=${p.team_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold font-mono text-xs rounded-xl flex items-center gap-1.5 transition-colors border border-slate-700"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>LIVE PASS</span>
+                      </a>
+                    </div>
                   )}
                 </div>
               </div>
@@ -317,7 +337,7 @@ export const PaymentVerificationPage: React.FC = () => {
             </div>
             
             <p className="text-xs text-slate-400">
-              Specify the reason for rejecting payment for <strong>{rejectModalTeam.teams?.team_name || rejectModalTeam.team_id}</strong> ({rejectModalTeam.team_id}). The team will be notified and allowed to resubmit their UTR.
+              Specify the reason for rejecting payment for <strong>{rejectModalTeam.teams?.team_name || rejectModalTeam.team_id}</strong> ({rejectModalTeam.team_id}). The team will see this in their payment portal and can resubmit their UTR.
             </p>
 
             <div>

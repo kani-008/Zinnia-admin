@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+﻿import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { store } from '../services/store';
 import { AdminRole } from '@packages/types/src';
 import { 
@@ -14,17 +14,22 @@ import {
   CreditCard,
   Menu,
   X,
-  ShieldCheck
+  ShieldCheck,
+  LogOut,
+  Coins
 } from 'lucide-react';
 
 export const AdminNavbar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [role, setRole] = useState<AdminRole>(store.getAdminRole());
+  const [authUser, setAuthUser] = useState<any>(store.getAuthUser());
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleStoreChange = () => {
       setRole(store.getAdminRole());
+      setAuthUser(store.getAuthUser());
     };
     const unsub = store.subscribe(handleStoreChange);
     return unsub;
@@ -35,20 +40,25 @@ export const AdminNavbar: React.FC = () => {
     store.setAdminRole(newRole);
   };
 
+  const handleLogout = () => {
+    store.logoutAdmin();
+    navigate('/login');
+  };
+
   const navItems = [
-    { 
-      name: 'Dashboard', 
-      path: '/dashboard', 
-      aliasPaths: ['/'],
-      icon: LayoutDashboard, 
-      roles: ['SUPER_ADMIN', 'EVENT_ADMIN', 'ENTRY_STAFF', 'FOOD_STAFF', 'CERTIFICATE_ADMIN'] 
-    },
     { 
       name: 'Payments', 
       path: '/payments', 
       aliasPaths: [],
       icon: CreditCard, 
-      roles: ['SUPER_ADMIN'] 
+      roles: ['SUPER_ADMIN', 'TREASURER'] 
+    },
+    { 
+      name: 'Dashboard', 
+      path: '/dashboard', 
+      aliasPaths: ['/'],
+      icon: LayoutDashboard, 
+      roles: ['SUPER_ADMIN', 'TREASURER', 'EVENT_ADMIN', 'ENTRY_STAFF', 'FOOD_STAFF', 'CERTIFICATE_ADMIN'] 
     },
     { 
       name: 'Gate Entry', 
@@ -121,23 +131,36 @@ export const AdminNavbar: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-white tracking-wider text-base">ZINNIA 2026</span>
-                <span className="bg-indigo-500/20 text-indigo-400 text-[10px] font-mono px-2 py-0.5 rounded-full border border-indigo-500/30">ADMIN</span>
+                <span className="font-extrabold text-white tracking-wider text-base font-mono">ZINNIA 2026</span>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-bold ${
+                  role === 'TREASURER' 
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
+                    : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+                }`}>
+                  {role === 'TREASURER' ? 'TREASURER PORTAL' : 'ADMIN'}
+                </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-mono hidden sm:block">Command & Operations Center</p>
+              <p className="text-[11px] text-slate-400 font-mono hidden sm:block">
+                {authUser?.name ? `${authUser.name}` : 'Command & Operations Center'}
+              </p>
             </div>
           </Link>
 
-          {/* Desktop Role Switcher & Mobile Menu Toggle */}
-          <div className="flex items-center gap-4">
+          {/* Desktop Role Switcher & Sign Out */}
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg">
-              <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
+              {role === 'TREASURER' ? (
+                <Coins className="w-4 h-4 text-emerald-400 shrink-0" />
+              ) : (
+                <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
+              )}
               <span className="text-[11px] font-mono text-slate-400 font-semibold hidden md:inline">ROLE:</span>
               <select
                 value={role}
                 onChange={(e) => handleRoleChange(e.target.value as AdminRole)}
                 className="bg-transparent border-none text-indigo-300 font-mono font-bold text-xs focus:outline-none cursor-pointer"
               >
+                <option value="TREASURER" className="bg-slate-900 text-emerald-300">TREASURER (Payment Verification)</option>
                 <option value="SUPER_ADMIN" className="bg-slate-900 text-white">SUPER_ADMIN (Full Control)</option>
                 <option value="ENTRY_STAFF" className="bg-slate-900 text-white">ENTRY_STAFF (Gate Entry)</option>
                 <option value="FOOD_STAFF" className="bg-slate-900 text-white">FOOD_STAFF (Food Token)</option>
@@ -145,6 +168,16 @@ export const AdminNavbar: React.FC = () => {
                 <option value="CERTIFICATE_ADMIN" className="bg-slate-900 text-white">CERTIFICATE_ADMIN (Certs)</option>
               </select>
             </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 bg-slate-900 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-500/40 text-slate-400 hover:text-rose-300 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
 
             {/* Mobile menu button */}
             <button
