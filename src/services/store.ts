@@ -1193,7 +1193,7 @@ class ZinniaStore {
 
 
   // --- AUTHENTICATION ---
-  async loginAdminApi(email: string, password: string): Promise<{
+  async loginAdminApi(username: string, password: string): Promise<{
     success: boolean;
     message?: string;
     user?: any;
@@ -1203,7 +1203,7 @@ class ZinniaStore {
       const res = await fetch('/api/admin/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ username: username.trim(), email: username.trim(), password: password.trim() })
       });
       const data = await res.json();
       if (data.success && data.user) {

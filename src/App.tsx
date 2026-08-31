@@ -30,9 +30,17 @@ export default function App() {
   const isLoginPage = location.pathname === '/login';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen-d bg-slate-950 text-slate-100 flex flex-col">
       {!isLoginPage && <AdminNavbar />}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+      {/* The login screen owns its own full-bleed centred layout, so it opts out
+          of the shell gutters; every other route gets the fluid container. */}
+      <main
+        className={
+          isLoginPage
+            ? 'flex-1 w-full'
+            : 'flex-1 w-full container-fluid py-fluid-4'
+        }
+      >
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           

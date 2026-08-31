@@ -1,18 +1,15 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { store } from '../services/store';
-import { 
-  CreditCard, 
-  Search, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  AlertCircle, 
-  RefreshCw, 
-  Copy, 
-  Check, 
+import {
+  Search,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  RefreshCw,
+  Copy,
+  Check,
   ExternalLink,
   Coins,
-  Send,
   MailCheck
 } from 'lucide-react';
 
@@ -103,51 +100,52 @@ export const PaymentVerificationPage: React.FC = () => {
   const rejectedCount = payments.filter(p => p.payment_status === 'REJECTED').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-fluid-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Coins className="w-5 h-5 text-emerald-400" />
-            <h1 className="text-xl font-bold text-white font-sans">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-fluid-3 border-b border-slate-800 pb-fluid-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 min-w-0">
+            <Coins className="w-5 h-5 text-emerald-400 shrink-0" />
+            <h1 className="text-xl font-bold text-white font-sans min-w-0 break-token">
               Treasurer Audit &amp; Payment Verification
             </h1>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 font-bold">
+            <span className="shrink-0 px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-2xs font-mono text-emerald-300 font-bold whitespace-nowrap">
               ₹250 / Head
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Cross-reference bank statement credits against participant UTR reference numbers. Approving automatically dispatches dynamic QR entry passes from <strong className="text-slate-300">zinnia2026@gcee.ac.in</strong>.
+          <p className="text-xs text-slate-400 mt-1 break-token">
+            Cross-reference bank statement credits against participant UTR reference numbers. Approving automatically dispatches dynamic QR entry passes from <strong className="text-slate-300 break-token">zinnia2026@gcee.ac.in</strong>.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:shrink-0">
           <button
             onClick={loadPayments}
             disabled={loading}
-            className="px-3 py-2 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-indigo-300 font-bold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors"
+            className="w-full sm:w-auto px-3 py-2 min-h-touch bg-slate-900 border border-slate-700 hover:bg-slate-800 text-indigo-300 font-bold text-xs rounded-fluid flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${loading ? 'animate-spin' : ''}`} />
             <span>Sync Live</span>
           </button>
         </div>
       </div>
 
       {actionFeedback && (
-        <div className="p-3.5 bg-slate-900 border border-emerald-500/40 rounded-xl text-xs text-emerald-300 font-mono flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-2">
-            <MailCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>{actionFeedback}</span>
+        <div className="p-fluid-3 bg-slate-900 border border-emerald-500/40 rounded-fluid-lg text-xs text-emerald-300 font-mono flex items-start justify-between gap-2 shadow-lg">
+          <div className="flex items-start gap-2 min-w-0">
+            <MailCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <span className="min-w-0 break-token">{actionFeedback}</span>
           </div>
-          <button onClick={() => setActionFeedback(null)} className="text-slate-500 hover:text-white cursor-pointer ml-3">
+          <button onClick={() => setActionFeedback(null)} className="tap inline-flex items-center justify-center shrink-0 -my-2 -mr-2 text-slate-500 hover:text-white cursor-pointer">
             ✕
           </button>
         </div>
       )}
 
       {/* Filter Tabs & Search */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-fluid-3">
+        {/* Status rail: one line on phones (swipeable), wraps from md up. */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-none scroll-touch pb-0.5 min-w-0 md:flex-wrap md:overflow-visible md:pb-0">
           {[
             { id: 'ALL', label: 'All Payments', count: payments.length },
             { id: 'PENDING_VERIFICATION', label: 'Pending Review', count: pendingCount, highlight: 'text-amber-400 font-bold' },
@@ -157,34 +155,34 @@ export const PaymentVerificationPage: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer transition-all border ${
+              className={`shrink-0 whitespace-nowrap inline-flex items-center justify-center min-h-touch px-3 py-1.5 rounded-fluid text-xs font-mono font-bold cursor-pointer transition-all border ${
                 statusFilter === tab.id
                   ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
                   : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white'
               }`}
             >
               <span>{tab.label}</span>
-              <span className={`ml-1.5 px-1.5 py-0.2 rounded text-[10px] bg-slate-950 ${tab.highlight || 'text-slate-300'}`}>
+              <span className={`ml-1.5 px-1.5 py-0.5 rounded text-2xs bg-slate-950 ${tab.highlight || 'text-slate-300'}`}>
                 {tab.count}
               </span>
             </button>
           ))}
         </div>
 
-        <div className="relative min-w-[280px]">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+        <div className="relative w-full md:w-auto md:shrink-0 md:min-w-[16rem] lg:min-w-[18rem]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
           <input
             type="text"
             placeholder="Search by Team ID, Name, UTR, College..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 text-white rounded-xl text-xs font-mono focus:border-indigo-400 focus:outline-none"
+            className="w-full min-h-touch pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 text-white rounded-fluid-lg text-xs font-mono focus:border-indigo-400 focus:outline-none"
           />
         </div>
       </div>
 
       {/* Payments List */}
-      <div className="space-y-4">
+      <div className="space-y-fluid-3">
         {filteredPayments.map((p) => {
           const team = p.teams || {};
           const status = p.payment_status || 'AWAITING_PAYMENT';
@@ -196,22 +194,22 @@ export const PaymentVerificationPage: React.FC = () => {
           return (
             <div 
               key={p.team_id}
-              className={`p-5 rounded-2xl border transition-all ${
+              className={`p-fluid-4 rounded-fluid-xl border transition-all ${
                 isPending ? 'bg-slate-900/90 border-amber-500/60 shadow-lg shadow-amber-950/20' :
                 isVerified ? 'bg-slate-900/70 border-emerald-500/40' :
                 isRejected ? 'bg-slate-900/70 border-rose-500/30' :
                 'bg-slate-900 border-slate-800'
               }`}
             >
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-fluid-4">
                 {/* Team Info */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white font-sans">{team.team_name || 'Team Record'}</span>
-                    <span className="px-2 py-0.5 rounded bg-slate-950 border border-indigo-500/40 text-indigo-300 font-mono text-[10px] font-bold">
+                <div className="space-y-1 min-w-0 lg:grow lg:basis-64">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 min-w-0">
+                    <span className="text-sm font-bold text-white font-sans min-w-0 break-token">{team.team_name || 'Team Record'}</span>
+                    <span className="shrink-0 px-2 py-0.5 rounded bg-slate-950 border border-indigo-500/40 text-indigo-300 font-mono text-2xs font-bold whitespace-nowrap">
                       {p.team_id}
                     </span>
-                    <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold border ${
+                    <span className={`shrink-0 px-2 py-0.5 rounded font-mono text-2xs font-bold border whitespace-nowrap ${
                       isVerified ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40' :
                       isPending ? 'bg-amber-950 text-amber-300 border-amber-500/50 animate-pulse' :
                       isRejected ? 'bg-rose-950 text-rose-300 border-rose-500/40' :
@@ -220,40 +218,40 @@ export const PaymentVerificationPage: React.FC = () => {
                       {status}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 font-sans">
+                  <p className="text-xs text-slate-400 font-sans break-token">
                     {team.college} &bull; {team.department} (Year {team.year})
                   </p>
                 </div>
 
                 {/* Amount & UTR Details */}
-                <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
-                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                    <div className="text-[10px] text-slate-500 uppercase">FEE (₹250/HEAD)</div>
-                    <div className="text-sm font-black text-white">₹{p.expected_amount || 250}</div>
+                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-fluid-2 text-xs font-mono min-w-0">
+                  <div className="p-fluid-2 rounded-fluid-lg bg-slate-950 border border-slate-800 min-w-0">
+                    <div className="text-2xs text-slate-500 uppercase">FEE (₹250/HEAD)</div>
+                    <div className="text-sm font-black text-white break-token">₹{p.expected_amount || 250}</div>
                   </div>
 
-                  <div className={`p-2.5 rounded-xl border ${
+                  <div className={`p-fluid-2 rounded-fluid-lg border min-w-0 ${
                     amountMismatch ? 'bg-rose-950/40 border-rose-500/60' : 'bg-slate-950 border-slate-800'
                   }`}>
-                    <div className="text-[10px] text-slate-500 uppercase">SUBMITTED AMOUNT</div>
-                    <div className={`text-sm font-black ${
+                    <div className="text-2xs text-slate-500 uppercase">SUBMITTED AMOUNT</div>
+                    <div className={`text-sm font-black break-token ${
                       amountMismatch ? 'text-rose-400' : 'text-emerald-400'
                     }`}>
                       {p.submitted_amount ? `₹${p.submitted_amount}` : 'NOT SUBMITTED'}
                     </div>
                   </div>
 
-                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 min-w-[170px]">
-                    <div className="text-[10px] text-slate-500 uppercase">BANK UTR / REF NO</div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-cyan-300 text-xs tracking-wider">
+                  <div className="p-fluid-2 rounded-fluid-lg bg-slate-950 border border-slate-800 min-w-0 xs:col-span-2 sm:col-span-1">
+                    <div className="text-2xs text-slate-500 uppercase">BANK UTR / REF NO</div>
+                    <div className="flex items-center justify-between gap-1 min-w-0">
+                      <span className="font-bold text-cyan-300 text-xs tracking-wider min-w-0 break-token">
                         {p.utr_number || 'PENDING SUBMISSION'}
                       </span>
                       {p.utr_number && (
                         <button
                           type="button"
                           onClick={() => handleCopyUtr(p.utr_number)}
-                          className="p-1 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded text-xs transition-colors cursor-pointer"
+                          className="tap inline-flex items-center justify-center shrink-0 -my-1 -mr-1 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-fluid text-xs transition-colors cursor-pointer"
                           title="Copy UTR to paste into Netbanking"
                         >
                           {copiedUtr === p.utr_number ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -264,16 +262,16 @@ export const PaymentVerificationPage: React.FC = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full lg:w-auto lg:shrink-0">
                   {!isVerified && (
                     <button
                       type="button"
                       disabled={processingId === p.team_id || !p.utr_number}
                       onClick={() => handleVerify(p.team_id, team.team_name || p.team_id)}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold font-mono text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed active:translate-x-0.5 active:translate-y-0.5"
+                      className="w-full sm:w-auto min-h-touch px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold font-mono text-xs rounded-fluid-lg flex items-center justify-center text-center gap-1.5 cursor-pointer transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed active:translate-x-0.5 active:translate-y-0.5"
                       title="Confirm statement credit and email QR pass"
                     >
-                      <CheckCircle2 className="w-4 h-4" />
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
                       <span>{processingId === p.team_id ? 'DISPATCHING...' : 'APPROVE & DISPATCH QR'}</span>
                     </button>
                   )}
@@ -283,26 +281,26 @@ export const PaymentVerificationPage: React.FC = () => {
                       type="button"
                       disabled={processingId === p.team_id}
                       onClick={() => handleOpenRejectModal(p)}
-                      className="px-3.5 py-2 bg-slate-800 hover:bg-rose-600 hover:text-white text-rose-300 font-bold font-mono text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition-all border border-slate-700"
+                      className="w-full sm:w-auto min-h-touch px-3.5 py-2 bg-slate-800 hover:bg-rose-600 hover:text-white text-rose-300 font-bold font-mono text-xs rounded-fluid-lg flex items-center justify-center text-center gap-1.5 cursor-pointer transition-all border border-slate-700"
                     >
-                      <XCircle className="w-3.5 h-3.5" />
+                      <XCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>REJECT</span>
                     </button>
                   )}
 
                   {isVerified && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono text-emerald-400 font-semibold flex items-center gap-1">
-                        <MailCheck className="w-3.5 h-3.5" />
-                        <span>Pass Dispatched</span>
+                    <div className="flex flex-col xs:flex-row xs:flex-wrap xs:items-center gap-2 w-full lg:w-auto">
+                      <span className="text-xs font-mono text-emerald-400 font-semibold flex items-center gap-1 min-w-0">
+                        <MailCheck className="w-3.5 h-3.5 shrink-0" />
+                        <span className="break-token">Pass Dispatched</span>
                       </span>
                       <a
                         href={`http://localhost:5173/passport?id=${p.team_id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold font-mono text-xs rounded-xl flex items-center gap-1.5 transition-colors border border-slate-700"
+                        className="w-full xs:w-auto min-h-touch px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold font-mono text-xs rounded-fluid-lg flex items-center justify-center gap-1.5 transition-colors border border-slate-700"
                       >
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                         <span>LIVE PASS</span>
                       </a>
                     </div>
@@ -312,7 +310,7 @@ export const PaymentVerificationPage: React.FC = () => {
 
               {/* Rejection notice if rejected */}
               {isRejected && p.rejection_reason && (
-                <div className="mt-3 p-2.5 bg-rose-950/60 border border-rose-500/30 rounded-xl text-xs text-rose-300 font-sans">
+                <div className="mt-fluid-3 p-fluid-2 bg-rose-950/60 border border-rose-500/30 rounded-fluid-lg text-xs text-rose-300 font-sans break-token">
                   <strong>Rejection Note:</strong> {p.rejection_reason}
                 </div>
               )}
@@ -321,7 +319,7 @@ export const PaymentVerificationPage: React.FC = () => {
         })}
 
         {filteredPayments.length === 0 && !loading && (
-          <div className="p-12 text-center text-slate-500 text-xs font-mono bg-slate-900 border border-slate-800 rounded-2xl">
+          <div className="p-fluid-8 text-center text-slate-500 text-xs font-mono bg-slate-900 border border-slate-800 rounded-fluid-xl break-token">
             No payment records matching the selected status and query.
           </div>
         )}
@@ -329,41 +327,41 @@ export const PaymentVerificationPage: React.FC = () => {
 
       {/* Reject Modal */}
       {rejectModalTeam && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-slate-900 border border-rose-500/50 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-fluid-3 z-50 animate-in fade-in">
+          <div className="bg-slate-900 border border-rose-500/50 rounded-fluid-xl px-fluid-5 pt-fluid-5 pb-safe max-h-[90dvh] overflow-y-auto scroll-touch max-w-md w-full space-y-fluid-3 shadow-2xl">
             <div className="flex items-center gap-2 text-rose-400">
-              <AlertCircle className="w-5 h-5" />
-              <h3 className="text-base font-bold font-mono text-white">REJECT PAYMENT RECORD</h3>
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <h3 className="text-base font-bold font-mono text-white min-w-0 break-token">REJECT PAYMENT RECORD</h3>
             </div>
-            
-            <p className="text-xs text-slate-400">
+
+            <p className="text-xs text-slate-400 break-token">
               Specify the reason for rejecting payment for <strong>{rejectModalTeam.teams?.team_name || rejectModalTeam.team_id}</strong> ({rejectModalTeam.team_id}). The team will see this in their payment portal and can resubmit their UTR.
             </p>
 
             <div>
-              <label className="block text-[11px] font-mono text-slate-400 mb-1">
+              <label className="block text-xs font-mono text-slate-400 mb-1">
                 REJECTION REASON (VISIBLE TO PARTICIPANT)
               </label>
               <textarea
                 rows={3}
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                className="w-full p-3 bg-slate-950 border border-slate-700 text-white rounded-xl text-xs font-mono focus:border-rose-400 focus:outline-none"
+                className="w-full min-h-[6.5rem] p-fluid-3 bg-slate-950 border border-slate-700 text-white rounded-fluid-lg text-xs font-mono focus:border-rose-400 focus:outline-none"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setRejectModalTeam(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-mono cursor-pointer"
+                className="w-full sm:w-auto min-h-touch px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-fluid-lg text-xs font-mono cursor-pointer inline-flex items-center justify-center"
               >
                 CANCEL
               </button>
               <button
                 type="button"
                 onClick={handleConfirmReject}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold font-mono text-xs rounded-xl cursor-pointer"
+                className="w-full sm:w-auto min-h-touch px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold font-mono text-xs rounded-fluid-lg cursor-pointer inline-flex items-center justify-center"
               >
                 CONFIRM REJECTION
               </button>

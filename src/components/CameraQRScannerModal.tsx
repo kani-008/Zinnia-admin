@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { X, Camera, SwitchCamera, Upload, AlertCircle, Sparkles } from 'lucide-react';
+import { X, Camera, SwitchCamera, Upload, AlertCircle } from 'lucide-react';
 
 interface CameraQRScannerModalProps {
   isOpen: boolean;
@@ -184,17 +184,17 @@ export const CameraQRScannerModal: React.FC<CameraQRScannerModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-fluid-3 z-50 animate-in fade-in duration-200">
+      <div className="bg-slate-900 border border-slate-700 rounded-fluid-xl max-w-md w-full max-h-[90dvh] overflow-y-auto scroll-touch p-fluid-4 pb-safe space-y-fluid-3 shadow-2xl relative">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-indigo-950 border border-indigo-500/40 text-indigo-400">
+        <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-lg bg-indigo-950 border border-indigo-500/40 text-indigo-400 shrink-0">
               <Camera className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="font-bold text-white text-sm font-sans">{title}</h3>
-              {subtitle && <p className="text-[11px] text-slate-400 font-mono">{subtitle}</p>}
+            <div className="min-w-0">
+              <h3 className="font-bold text-white text-sm font-sans break-token">{title}</h3>
+              {subtitle && <p className="text-xs text-slate-400 font-mono break-token">{subtitle}</p>}
             </div>
           </div>
           <button
@@ -202,19 +202,20 @@ export const CameraQRScannerModal: React.FC<CameraQRScannerModalProps> = ({
               stopScanner();
               onClose();
             }}
-            className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            className="tap shrink-0 -mr-1.5 -mt-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer inline-flex items-center justify-center"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Viewport */}
-        <div className="relative bg-black rounded-xl overflow-hidden border border-slate-800 min-h-[300px] flex items-center justify-center">
-          <div id="camera-qr-reader" className="w-full text-slate-300 text-xs overflow-hidden" />
-          
+        <div className="relative mx-auto w-full aspect-square max-w-[46dvh] max-h-[46dvh] bg-black rounded-fluid overflow-hidden border border-slate-800 flex items-center justify-center">
+          <div id="camera-qr-reader" className="w-full max-h-full text-slate-300 text-xs overflow-hidden" />
+
           {/* Target Scan Bounding Reticle Overlay */}
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="w-56 h-56 border-2 border-indigo-400/80 rounded-xl relative shadow-[0_0_20px_rgba(99,102,241,0.25)] animate-pulse">
+            <div className="aspect-square w-[70%] max-w-[14rem] border-2 border-indigo-400/80 rounded-xl relative shadow-[0_0_20px_rgba(99,102,241,0.25)] animate-pulse">
               <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-indigo-400 -mt-1 -ml-1 rounded-tl" />
               <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-indigo-400 -mt-1 -mr-1 rounded-tr" />
               <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-indigo-400 -mb-1 -ml-1 rounded-bl" />
@@ -224,25 +225,25 @@ export const CameraQRScannerModal: React.FC<CameraQRScannerModalProps> = ({
         </div>
 
         {errorMsg && (
-          <div className="p-3 rounded-lg bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs flex items-center gap-2 font-mono">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-            <span>{errorMsg}</span>
+          <div className="p-fluid-3 rounded-lg bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs flex items-start gap-2 font-mono">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+            <span className="min-w-0 break-token">{errorMsg}</span>
           </div>
         )}
 
         {/* Controls: Camera Switcher + Upload File Fallback */}
-        <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800 text-xs font-mono">
+        <div className="flex flex-col xs:flex-row xs:flex-wrap xs:items-center xs:justify-between gap-2 pt-fluid-2 border-t border-slate-800 text-xs font-mono">
           {cameras.length > 1 ? (
             <button
               onClick={handleSwitchCamera}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="tap w-full xs:w-auto px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
-              <SwitchCamera className="w-3.5 h-3.5" />
-              <span>Flip Camera</span>
+              <SwitchCamera className="w-3.5 h-3.5 shrink-0" />
+              <span className="break-token">Flip Camera</span>
             </button>
-          ) : <div />}
+          ) : <div className="hidden xs:block" />}
 
-          <div>
+          <div className="w-full xs:w-auto">
             <input
               type="file"
               accept="image/*"
@@ -252,10 +253,10 @@ export const CameraQRScannerModal: React.FC<CameraQRScannerModalProps> = ({
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="tap w-full xs:w-auto px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
-              <Upload className="w-3.5 h-3.5" />
-              <span>Upload QR Image</span>
+              <Upload className="w-3.5 h-3.5 shrink-0" />
+              <span className="break-token">Upload QR Image</span>
             </button>
           </div>
         </div>

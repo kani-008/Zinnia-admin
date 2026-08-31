@@ -8,9 +8,9 @@ class AdminController:
     @staticmethod
     def login():
         data = request.get_json(silent=True) or {}
-        email = data.get("email", "")
+        username_or_email = data.get("username") or data.get("email") or ""
         password = data.get("password", "")
-        res = authenticate_admin(email, password)
+        res = authenticate_admin(username_or_email, password)
         status_code = 200 if res.get("success") else 401
         return jsonify(res), status_code
 
