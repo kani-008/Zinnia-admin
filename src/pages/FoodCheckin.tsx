@@ -63,7 +63,7 @@ export const FoodCheckinPage: React.FC = () => {
 
     const resolvedPref = (res as any).food_preference || 
                          res.member?.food_preference || 
-                         (raw.includes('"f":"N"') ? 'NON_VEG' : 'VEG');
+                         'VEG';
 
     if (res.success) {
       setFeedback({
@@ -372,4 +372,5 @@ export const FoodCheckinPage: React.FC = () => {
 };
 
 export default FoodCheckinPage;
+
 
