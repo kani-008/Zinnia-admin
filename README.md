@@ -4,7 +4,7 @@ Dedicated Command Center & Management Portal for Zinnia 2026 Symposium Organizer
 
 ## Project Structure
 - **`src/`**: React 18 + Vite + Tailwind Admin Dashboard & Camera QR Scanner (Port `5174`).
-- **`backend/`**: Python Flask API (Port `5050`) for checkpoints, attendance, and payment verification.
+- **`backend/`**: Python Flask API (Port `5000`) for checkpoints, attendance, and payment verification.
 
 ## Getting Started
 
@@ -15,9 +15,9 @@ npm run dev
 ```
 *Access the portal at `http://localhost:5174`.*
 
-### 2. Run Admin Backend
+### 2. Run Backend
 ```bash
-cd backend
+cd ../zinnia_2026/backend
 python app.py
 ```
-*API runs at `http://localhost:5050`.*
+*API runs at `http://localhost:5000`.*
