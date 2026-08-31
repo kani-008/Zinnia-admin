@@ -401,207 +401,73 @@ class ZinniaStore {
   }
 
   // --- CHECK-IN LOGIC ---
-  recordEntryCheckin(
-    identifier: string,
-    scannedBy = 'Gate Terminal',
-    targetMemberId?: string
-  ): { success: boolean; message: string; record?: AttendanceRecord; team?: Team; member?: TeamMember; participant?: Participant } {
-    const lookup = this.lookupEntity(identifier);
-    if (!lookup.team && !lookup.member) {
-      return { success: false, message: `Attendee ID or QR "${identifier}" not found.` };
+  // The former recordEntryCheckin / recordFoodDistribution / recordEventCheckin
+  // helpers were removed. They wrote attendance to localStorage, fired a
+  // fire-and-forget Supabase insert whose result was never checked, and then
+  // returned { success: true } unconditionally — so a failed write still showed
+  // "Gate Entry granted" on the scanner. Their duplicate detection also read
+  // per-device localStorage, so two staff phones shared no state and the same
+  // person could be admitted twice without either device noticing.
+  //
+  // All check-ins now go through the *Api methods below, which post to the
+  // server, require an admin token, and surface failures to the operator.
+
+  // --- CHECK-IN TRANSPORT ---
+  // Single place where scanner requests reach the server. Distinguishes the
+  // three failure modes an operator needs to tell apart at a checkpoint:
+  //   network/API down  -> the scan did NOT register, retry or use another device
+  //   auth failure      -> this device must sign in again
+  //   business refusal  -> the scan registered and the answer is "no" (unpaid,
+  //                        not registered, already checked in)
+  // It never invents a success. If we cannot reach the server, that is a failure.
+  private async postCheckin(
+    path: string,
+    params: Record<string, unknown>
+  ): Promise<{ success: boolean; reason: string; data?: any }> {
+    const token = localStorage.getItem('admin_token') || '';
+    if (!token) {
+      return { success: false, reason: 'NOT SIGNED IN: this device has no admin session. Sign in again.' };
     }
 
-    const team = lookup.team || (lookup.member ? this.getTeamById(lookup.member.team_id) : undefined);
-    const member = targetMemberId 
-      ? this.getMemberById(targetMemberId) 
-      : (lookup.member || team?.members?.[0]);
-
-    if (!team || !member) {
-      return { success: false, message: 'Could not resolve attendee team details.' };
-    }
-
-    const attendance = this.getAttendance();
-    const alreadyCheckedIn = attendance.find(
-      a => (a.member_id === member.id || a.agent_id === member.id) && a.checkin_type === 'ENTRY'
-    );
-
-    if (alreadyCheckedIn) {
-      const timeStr = new Date(alreadyCheckedIn.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    let res: Response;
+    try {
+      res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(params)
+      });
+    } catch (e: any) {
       return {
         success: false,
-        message: `${member.name} (${team.team_name}) is ALREADY CHECKED IN at ${timeStr}. Duplicate entry prevented.`,
-        team,
-        member,
-        participant: this.getParticipantByAgentId(member.id)
+        reason: `NETWORK ERROR: could not reach the check-in server (${e?.message || 'offline'}). The scan was NOT recorded — retry.`
       };
     }
 
-    const record: AttendanceRecord = {
-      team_id: team.team_id,
-      member_id: member.id,
-      agent_id: member.id,
-      passport_token_used: member.passport_token || identifier,
-      participant_name: `${member.name} [${team.team_name}]`,
-      college: team.college,
-      checkin_type: 'ENTRY',
-      scanned_by: scannedBy,
-      scanned_at: new Date().toISOString(),
-      location: 'Main Security Gate'
-    };
-
-    attendance.unshift(record);
-    this.setStorage(STORAGE_KEYS.ATTENDANCE, attendance);
-
-    if (isSupabaseConfigured()) {
-      supabase.from('attendance').insert([{
-        team_id: record.team_id,
-        member_id: record.member_id,
-        passport_token_used: record.passport_token_used,
-        participant_name: record.participant_name,
-        college: record.college,
-        checkin_type: record.checkin_type,
-        scanned_by: record.scanned_by,
-        location: record.location
-      }]).then();
-    }
-
-    this.notifySubscribers();
-
-    return {
-      success: true,
-      message: `Gate Entry granted for ${member.name} (${team.team_name})`,
-      record,
-      team,
-      member,
-      participant: this.getParticipantByAgentId(member.id)
-    };
-  }
-
-  recordFoodDistribution(
-    identifier: string,
-    scannedBy = 'Dining Counter'
-  ): { success: boolean; message: string; member?: TeamMember; participant?: Participant } {
-    const lookup = this.lookupEntity(identifier);
-    if (!lookup.member) {
-      return { success: false, message: `Attendee ID or QR "${identifier}" not recognized.` };
-    }
-
-    const member = lookup.member;
-    const team = lookup.team || this.getTeamById(member.team_id);
-
-    if (member.food_collected) {
-      const timeStr = member.food_collected_at 
-        ? new Date(member.food_collected_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-        : 'earlier';
+    if (res.status === 401 || res.status === 403) {
+      let msg = '';
+      try { msg = (await res.json())?.message || ''; } catch { /* non-JSON body */ }
       return {
         success: false,
-        message: `FOOD ALREADY CLAIMED: ${member.name} claimed meal at ${timeStr}.`
+        reason: msg || 'ACCESS DENIED: your session is invalid or lacks permission for this checkpoint. Sign in again.'
       };
     }
 
-    member.food_collected = true;
-    member.food_collected_at = new Date().toISOString();
-
-    const allMembers = this.getTeamMembers();
-    const idx = allMembers.findIndex(m => m.id === member.id);
-    if (idx !== -1) {
-      allMembers[idx] = member;
-      this.setStorage(STORAGE_KEYS.MEMBERS, allMembers);
-    }
-
-    if (isSupabaseConfigured()) {
-      supabase.from('team_members').update({
-        food_collected: true,
-        food_collected_at: member.food_collected_at
-      }).eq('id', member.id).then();
-    }
-
-    this.notifySubscribers();
-
-    return {
-      success: true,
-      message: `Lunch token claimed for ${member.name} (${team?.team_name || 'Team'})`,
-      member,
-      participant: this.getParticipantByAgentId(member.id)
-    };
-  }
-
-  recordEventCheckin(
-    identifier: string,
-    eventId: string,
-    scannedBy = 'Event Desk'
-  ): { success: boolean; message: string; record?: AttendanceRecord } {
-    const lookup = this.lookupEntity(identifier);
-    if (!lookup.member) {
-      return { success: false, message: `Attendee ID or QR "${identifier}" not recognized.` };
-    }
-
-    const member = lookup.member;
-    const team = lookup.team || this.getTeamById(member.team_id);
-    const event = this.getEventById(eventId);
-
-    if (!event) {
-      return { success: false, message: 'Invalid event track selected.' };
-    }
-
-    if (!team || !team.registered_events.includes(eventId)) {
+    let data: any;
+    try {
+      data = await res.json();
+    } catch {
       return {
         success: false,
-        message: `ACCESS DENIED: ${member.name} (${team?.team_name || 'Team'}) is NOT registered for "${event.mission_name}".`
+        reason: `SERVER ERROR ${res.status}: unreadable response. The scan was NOT recorded — retry.`
       };
     }
 
-    const attendance = this.getAttendance();
-    const alreadyCheckedIn = attendance.find(
-      a => (a.member_id === member.id || a.agent_id === member.id) && a.checkin_type === 'EVENT' && a.event_id === eventId
-    );
-
-    if (alreadyCheckedIn) {
-      return {
-        success: false,
-        message: `${member.name} was already verified for this event at ${new Date(alreadyCheckedIn.scanned_at).toLocaleTimeString()}.`
-      };
+    if (data?.success) {
+      await this.syncFromSupabase();
+      return { success: true, reason: data.reason || 'Check-in confirmed', data };
     }
 
-    const record: AttendanceRecord = {
-      team_id: team.team_id,
-      member_id: member.id,
-      agent_id: member.id,
-      passport_token_used: member.passport_token || identifier,
-      participant_name: `${member.name} (${team.team_name})`,
-      college: team.college,
-      checkin_type: 'EVENT',
-      event_id: event.id,
-      event_name: event.mission_name,
-      scanned_by: scannedBy,
-      scanned_at: new Date().toISOString(),
-      location: event.venue
-    };
-
-    attendance.unshift(record);
-    this.setStorage(STORAGE_KEYS.ATTENDANCE, attendance);
-
-    if (isSupabaseConfigured()) {
-      supabase.from('attendance').insert([{
-        team_id: record.team_id,
-        member_id: record.member_id,
-        passport_token_used: record.passport_token_used,
-        participant_name: record.participant_name,
-        college: record.college,
-        checkin_type: record.checkin_type,
-        event_id: record.event_id,
-        scanned_by: record.scanned_by,
-        location: record.location
-      }]).then();
-    }
-
-    this.notifySubscribers();
-
-    return {
-      success: true,
-      message: `Event track verified: ${member.name} admitted to ${event.mission_name}`,
-      record
-    };
+    return { success: false, reason: data?.reason || data?.message || `Check-in refused (HTTP ${res.status}).`, data };
   }
 
   // --- API CHECK-IN HANDLERS ---
@@ -611,32 +477,8 @@ class ZinniaStore {
     scanned_by?: string;
     location?: string;
   }): Promise<{ success: boolean; reason: string; member?: TeamMember; team?: Team }> {
-    try {
-      const token = localStorage.getItem('admin_token') || '';
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch('/api/admin/checkin/entry', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params)
-      });
-      const data = await res.json();
-      if (data && data.success) {
-        await this.syncFromSupabase();
-      }
-      return {
-        success: data?.success ?? (res.status === 200),
-        reason: data?.reason || (data?.success ? 'Campus entry granted' : 'Check-in failed'),
-        member: data?.member,
-        team: data?.team
-      };
-    } catch (e: any) {
-      return {
-        success: false,
-        reason: e.message || 'Campus entry verification error.'
-      };
-    }
+    const r = await this.postCheckin('/api/admin/checkin/entry', params);
+    return { success: r.success, reason: r.reason, member: r.data?.member, team: r.data?.team };
   }
 
   async checkinEventApi(params: {
@@ -646,33 +488,14 @@ class ZinniaStore {
     scanned_by?: string;
     location?: string;
   }): Promise<{ success: boolean; reason: string; member?: TeamMember; team?: Team; registered_events?: any[] }> {
-    try {
-      const token = localStorage.getItem('admin_token') || '';
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch('/api/admin/checkin/event', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params)
-      });
-      const data = await res.json();
-      if (data && data.success) {
-        await this.syncFromSupabase();
-      }
-      return {
-        success: data?.success ?? (res.status === 200),
-        reason: data?.reason || (data?.success ? 'Event check-in verified' : 'Check-in rejected'),
-        member: data?.member,
-        team: data?.team,
-        registered_events: data?.registered_events
-      };
-    } catch (e: any) {
-      return {
-        success: false,
-        reason: e.message || 'Event track check-in error.'
-      };
-    }
+    const r = await this.postCheckin('/api/admin/checkin/event', params);
+    return {
+      success: r.success,
+      reason: r.reason,
+      member: r.data?.member,
+      team: r.data?.team,
+      registered_events: r.data?.registered_events
+    };
   }
 
   async checkinFoodApi(params: {
@@ -681,52 +504,50 @@ class ZinniaStore {
     scanned_by?: string;
     location?: string;
   }): Promise<{ success: boolean; reason: string; member?: TeamMember; team?: Team; food_preference?: 'VEG' | 'NON_VEG' }> {
-    try {
-      const token = localStorage.getItem('admin_token') || '';
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch('/api/admin/checkin/food', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params)
-      });
-      const data = await res.json();
-      if (data && data.success) {
-        await this.syncFromSupabase();
-      }
-      return {
-        success: data?.success ?? (res.status === 200),
-        reason: data?.reason || (data?.success ? 'Food token claimed' : 'Claim failed'),
-        member: data?.member,
-        team: data?.team,
-        food_preference: data?.food_preference
-      };
-    } catch (e: any) {
-      return {
-        success: false,
-        reason: e.message || 'Food distribution service error.'
-      };
-    }
+    const r = await this.postCheckin('/api/admin/checkin/food', params);
+    return {
+      success: r.success,
+      reason: r.reason,
+      member: r.data?.member,
+      team: r.data?.team,
+      food_preference: r.data?.food_preference
+    };
   }
 
   async resendPassportApi(memberId: string): Promise<{ success: boolean; message: string }> {
+    const token = localStorage.getItem('admin_token') || '';
     try {
       const res = await fetch('/api/passport-dispatch/resend', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ member_id: memberId })
       });
+
+      if (res.status === 401 || res.status === 403) {
+        return { success: false, message: 'Not authorised to resend passes. Sign in again.' };
+      }
+
       const data = await res.json();
-      return {
-        success: data?.success ?? (res.status === 200),
-        message: data?.message || (data?.success ? 'Passport dispatched' : 'Dispatch failed')
-      };
+
+      // The endpoint reports success for the request as a whole, so inspect the
+      // per-recipient results before telling the treasurer the pass went out.
+      const results: any[] = data?.details?.results || data?.results || [];
+      const failed = results.filter(r => r && !r.success);
+      if (failed.length > 0) {
+        const why = failed[0]?.error || 'delivery failed';
+        return { success: false, message: `Resend failed for ${failed.length} recipient(s): ${why}` };
+      }
+
+      if (!data?.success) {
+        return { success: false, message: data?.message || data?.error || 'Dispatch failed' };
+      }
+
+      return { success: true, message: data?.message || 'Passport dispatched' };
     } catch (e: any) {
-      return {
-        success: false,
-        message: e.message || 'Dispatch request failed'
-      };
+      return { success: false, message: e?.message || 'Dispatch request failed' };
     }
   }
 
