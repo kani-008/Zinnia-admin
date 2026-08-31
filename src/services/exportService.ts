@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+﻿import * as XLSX from 'xlsx';
 import { store } from './store';
 
 export function exportParticipantsExcel(): void {
@@ -16,7 +16,7 @@ export function exportParticipantsExcel(): void {
           'Member Name': m.name,
           'Member Email': m.email,
           'Member Phone': m.phone,
-          'Hand Band ID': m.band_id || 'UNASSIGNED',
+          'Food Preference': m.food_preference || 'VEG',
           'Food Claimed': m.food_collected ? 'YES' : 'NO',
           'Food Claimed At': m.food_collected_at ? new Date(m.food_collected_at).toLocaleString() : 'N/A',
           'College': team.college,
@@ -53,7 +53,6 @@ export function exportAttendanceExcel(): void {
     'Attendance Record ID': a.id,
     'Team ID': a.team_id,
     'Member ID': a.member_id || a.agent_id,
-    'Hand Band ID': a.band_id || 'N/A',
     'Attendee Name': a.participant_name,
     'College': a.college,
     'Check-in Type': a.checkin_type,
@@ -79,7 +78,7 @@ export function exportFoodExcel(): void {
       'Team Name': team?.team_name || 'N/A',
       'Member ID': m.id,
       'Member Name': m.name,
-      'Hand Band ID': m.band_id || 'UNASSIGNED',
+      'Food Preference': m.food_preference || 'VEG',
       'College': team?.college || 'N/A',
       'Food Collected': m.food_collected ? 'YES' : 'NO',
       'Redemption Time': m.food_collected_at ? new Date(m.food_collected_at).toLocaleString() : 'PENDING'

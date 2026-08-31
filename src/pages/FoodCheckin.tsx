@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { store } from '../services/store';
 import { TeamMember, Team } from '@packages/types/src';
 import { CameraQRScannerModal } from '../components/CameraQRScannerModal';
@@ -23,6 +23,7 @@ export const FoodCheckinPage: React.FC = () => {
     message: string;
     member?: TeamMember;
     team?: Team;
+    food_preference?: 'VEG' | 'NON_VEG';
     time?: string;
   } | null>(null);
 
@@ -53,12 +54,16 @@ export const FoodCheckinPage: React.FC = () => {
     const res = await store.checkinFoodApi({
       passport_token: raw,
       id: raw,
-      scanned_by: 'Dining Hall Coordinator',
+      scanned_by: 'Dining Hall Staff',
       location: 'Dining Counter A'
     });
 
     setIsProcessing(false);
     setTokenInput('');
+
+    const resolvedPref = (res as any).food_preference || 
+                         res.member?.food_preference || 
+                         (raw.includes('"f":"N"') ? 'NON_VEG' : 'VEG');
 
     if (res.success) {
       setFeedback({
@@ -66,6 +71,7 @@ export const FoodCheckinPage: React.FC = () => {
         message: res.reason,
         member: res.member,
         team: res.team,
+        food_preference: resolvedPref,
         time: new Date().toLocaleTimeString()
       });
     } else {
@@ -74,6 +80,7 @@ export const FoodCheckinPage: React.FC = () => {
         message: res.reason,
         member: res.member,
         team: res.team,
+        food_preference: resolvedPref,
         time: new Date().toLocaleTimeString()
       });
     }
@@ -86,6 +93,8 @@ export const FoodCheckinPage: React.FC = () => {
            m.id.toLowerCase().includes(q);
   });
 
+  const isNonVeg = feedback?.food_preference === 'NON_VEG';
+
   return (
     <div className="mx-auto w-full max-w-5xl pb-safe">
       {/* Header */}
@@ -95,18 +104,11 @@ export const FoodCheckinPage: React.FC = () => {
           <span className="min-w-0">Food & Refreshment Token Desk</span>
         </h1>
         <p className="text-xs text-slate-400 mt-1">
-          Scan attendee Digital Passport QR for 1-time lunch token distribution lock.
+          Scan attendee Digital Passport QR for instant Veg / Non-Veg badge display & single-use meal lock.
         </p>
       </div>
 
-      {/*
-        Sticky scan console: on a phone the counter strip sits directly under the
-        title as a full-width bar, and both it and the scan input stay pinned
-        while the claimed list scrolls beneath. The offset tracks the navbar's
-        real height and sits under its z-50: ~57px on phones (min-h-touch row +
-        py-fluid-2 + border), but ~112px from `lg`, where the h-16 header row
-        gains the desktop link rail beneath it. Matches the other scanner pages.
-      */}
+      {/* Sticky scan console */}
       <div className="sticky top-14 lg:top-28 z-30 bg-slate-950 pt-fluid-4 pb-fluid-4">
         {/* Claimed / total counter + sync */}
         <div className="mb-fluid-3 flex items-stretch gap-fluid-2 sm:justify-end">
@@ -135,37 +137,35 @@ export const FoodCheckinPage: React.FC = () => {
                 <QrCode className="w-4 h-4 shrink-0 text-amber-400" />
                 <span className="break-token">SCAN ATTENDEE PASSPORT QR OR ENTER ID</span>
               </label>
-              <span className="shrink-0 text-2xs bg-amber-950 text-amber-300 px-2 py-1 rounded border border-amber-500/40 font-mono">
-                1-Time Food Lock
+              <span className="shrink-0 text-2xs bg-amber-950 text-amber-300 px-2 py-1 rounded border border-amber-500/40 font-mono font-bold">
+                1-Time Food Lock Active
               </span>
             </div>
 
-            <div className="flex flex-col gap-fluid-2 sm:flex-row sm:items-stretch">
+            <div className="flex flex-col sm:flex-row gap-fluid-2">
               <input
                 type="text"
-                autoFocus
-                disabled={isProcessing}
-                placeholder="Scan QR token hex code or type Member ID (e.g. ZIN26-XXXXXX-M1)..."
                 value={tokenInput}
                 onChange={(e) => setTokenInput(e.target.value)}
-                className="w-full min-h-touch px-fluid-3 py-3 bg-slate-950 border border-slate-700 text-white rounded-fluid text-sm focus:border-amber-400 focus:outline-none font-mono font-bold sm:w-auto sm:flex-1"
+                placeholder="Scan QR or paste Passport Token / Member ID..."
+                className="flex-1 min-h-touch px-fluid-3 py-fluid-2 bg-slate-950 border border-slate-700 rounded-fluid text-xs font-mono text-white focus:outline-none focus:border-amber-400"
               />
 
-              <div className="flex gap-fluid-2">
+              <div className="flex items-center gap-fluid-2">
                 <button
                   type="button"
                   onClick={() => setIsCameraOpen(true)}
-                  className="tap inline-flex flex-1 items-center justify-center gap-1.5 px-fluid-4 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-fluid cursor-pointer transition-colors border border-slate-700 sm:flex-none"
-                  title="Scan with Camera"
+                  className="tap inline-flex min-h-touch items-center justify-center gap-1.5 px-fluid-3 py-fluid-2 bg-slate-800 hover:bg-slate-700 text-white rounded-fluid text-xs font-mono border border-slate-600 transition-colors cursor-pointer"
+                  title="Open Camera Scanner"
                 >
-                  <Camera className="w-4 h-4 shrink-0" />
-                  <span>Camera</span>
+                  <Camera className="w-4 h-4" />
+                  <span className="hidden xs:inline">CAMERA</span>
                 </button>
 
                 <button
                   type="submit"
                   disabled={isProcessing || !tokenInput.trim()}
-                  className="tap inline-flex flex-[1.6] items-center justify-center px-fluid-4 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs rounded-fluid cursor-pointer transition-all shadow-md font-mono sm:flex-none sm:px-fluid-6"
+                  className="tap flex-1 sm:flex-none min-h-touch px-fluid-4 py-fluid-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold font-mono text-xs rounded-fluid transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {isProcessing ? 'VALIDATING...' : 'CLAIM FOOD TOKEN'}
                 </button>
@@ -175,29 +175,46 @@ export const FoodCheckinPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Big PASS / FAIL Banner — sits below the sticky console so a tall
-          result card can never be pinned off-screen. */}
+      {/* Arm's Length Large Color-Coded PASS / FAIL Banner (Phase 6 Fix) */}
       {feedback && (
         <div className="mt-fluid-4 animate-fadeIn">
           {feedback.type === 'success' ? (
-            <div className="p-fluid-4 bg-emerald-950/80 border-2 border-emerald-500 rounded-fluid-xl space-y-fluid-3 sm:p-fluid-5">
-              <div className="flex flex-wrap items-center justify-between gap-fluid-2">
-                <div className="flex min-w-0 items-center gap-2 text-emerald-400 font-black font-mono text-lg">
-                  <CheckCircle2 className="w-6 h-6 shrink-0" />
-                  <span className="break-token">✓ PASS — MEAL TOKEN CLAIMED</span>
+            <div className={`p-fluid-5 border-4 rounded-fluid-xl shadow-2xl transition-all ${
+              isNonVeg 
+                ? 'bg-rose-950/95 border-rose-500 text-rose-100 shadow-rose-950/50' 
+                : 'bg-emerald-950/95 border-emerald-500 text-emerald-100 shadow-emerald-950/50'
+            }`}>
+              <div className="flex flex-wrap items-center justify-between gap-fluid-2 pb-fluid-3 border-b border-white/20">
+                <div className="flex min-w-0 items-center gap-2 font-black font-mono text-lg sm:text-xl">
+                  <CheckCircle2 className="w-7 h-7 shrink-0" />
+                  <span className="break-token">✓ PASS — MEAL ISSUED</span>
                 </div>
-                <span className="shrink-0 text-xs font-mono text-emerald-300">{feedback.time}</span>
+                <span className="shrink-0 text-xs font-mono font-bold px-2 py-1 rounded bg-black/40 border border-white/20">
+                  {feedback.time}
+                </span>
               </div>
 
-              <div className="grid grid-cols-1 xs:grid-cols-2 gap-fluid-3 pt-fluid-3 text-xs font-mono border-t border-emerald-800/50">
+              {/* Huge arm's-length meal preference indicator */}
+              <div className="py-fluid-4 text-center">
+                <span className="text-2xs sm:text-xs font-mono uppercase tracking-widest text-white/70 block mb-1">
+                  MEAL TYPE TO DISPENSE:
+                </span>
+                <div className={`text-3xl sm:text-5xl font-black font-mono tracking-wider drop-shadow-md uppercase ${
+                  isNonVeg ? 'text-rose-300' : 'text-emerald-300'
+                }`}>
+                  {isNonVeg ? '🍗 NON-VEG MEAL' : '🌱 VEG MEAL'}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-fluid-3 pt-fluid-3 text-xs font-mono border-t border-white/20">
                 <div className="min-w-0">
-                  <span className="text-slate-400 block text-2xs">PARTICIPANT</span>
+                  <span className="text-white/60 block text-2xs uppercase">ATTENDEE</span>
                   <strong className="text-white text-base break-token">{feedback.member?.name}</strong>
-                  <span className="block text-xs text-cyan-300 break-token">{feedback.member?.id}</span>
+                  <span className="block text-xs text-cyan-200 break-token">{feedback.member?.id}</span>
                 </div>
                 <div className="min-w-0">
-                  <span className="text-slate-400 block text-2xs">STATUS</span>
-                  <strong className="text-emerald-200 text-sm break-token">1 Meal Issued &bull; Food Lock Active</strong>
+                  <span className="text-white/60 block text-2xs uppercase">TOKEN SECURITY LOCK</span>
+                  <strong className="text-white text-sm break-token">✓ 1-Time Food Distribution Recorded</strong>
                 </div>
               </div>
             </div>
@@ -206,7 +223,7 @@ export const FoodCheckinPage: React.FC = () => {
               <div className="flex flex-wrap items-center justify-between gap-fluid-2">
                 <div className="flex min-w-0 items-center gap-2 text-rose-400 font-black font-mono text-lg">
                   <AlertTriangle className="w-6 h-6 shrink-0" />
-                  <span className="break-token">✗ FAIL — FOOD TOKEN REJECTED</span>
+                  <span className="break-token">✗ FAIL — MEAL CLAIM REJECTED</span>
                 </div>
                 <span className="shrink-0 text-xs font-mono text-rose-300">{feedback.time}</span>
               </div>
@@ -216,8 +233,13 @@ export const FoodCheckinPage: React.FC = () => {
               </p>
 
               {feedback.member && (
-                <div className="text-xs font-mono text-slate-400 pt-fluid-1 break-token">
-                  Participant: <strong className="text-white">{feedback.member.name}</strong> ({feedback.member.id})
+                <div className="text-xs font-mono text-slate-300 pt-fluid-1 break-token flex items-center gap-2">
+                  <span>Attendee: <strong className="text-white">{feedback.member.name}</strong> ({feedback.member.id})</span>
+                  <span className={`px-2 py-0.5 rounded text-2xs font-bold ${
+                    isNonVeg ? 'bg-rose-900 text-rose-200' : 'bg-emerald-900 text-emerald-200'
+                  }`}>
+                    {isNonVeg ? '🍗 NON-VEG' : '🌱 VEG'}
+                  </span>
                 </div>
               )}
             </div>
@@ -246,14 +268,13 @@ export const FoodCheckinPage: React.FC = () => {
         </div>
 
         <div className="mt-fluid-4">
-          {/* Tablet / desktop: real table */}
           <table className="hidden md:table w-full text-left text-xs font-mono">
             <thead>
               <tr className="border-b border-slate-800 text-slate-400">
                 <th className="pb-2">CLAIM TIME</th>
                 <th className="pb-2">PARTICIPANT</th>
                 <th className="pb-2">MEMBER ID</th>
-                <th className="pb-2">PHONE</th>
+                <th className="pb-2">MEAL PREFERENCE</th>
                 <th className="pb-2">STATUS</th>
               </tr>
             </thead>
@@ -276,7 +297,15 @@ export const FoodCheckinPage: React.FC = () => {
                       {m.name} {m.is_leader && '👑'}
                     </td>
                     <td className="py-2.5 pr-3 text-cyan-400 break-token">{m.id}</td>
-                    <td className="py-2.5 pr-3 text-slate-400 break-token">{m.phone}</td>
+                    <td className="py-2.5 pr-3">
+                      <span className={`px-2 py-0.5 rounded text-2xs font-bold ${
+                        m.food_preference === 'NON_VEG'
+                          ? 'bg-rose-950 text-rose-300 border border-rose-500/40'
+                          : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
+                      }`}>
+                        {m.food_preference === 'NON_VEG' ? '🍗 NON-VEG' : '🌱 VEG'}
+                      </span>
+                    </td>
                     <td className="py-2.5">
                       <span className="inline-block px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-2xs whitespace-nowrap">
                         ✓ CLAIMED
@@ -288,7 +317,7 @@ export const FoodCheckinPage: React.FC = () => {
             </tbody>
           </table>
 
-          {/* Phone: the same rows as stacked cards */}
+          {/* Phone: stacked cards */}
           <div className="md:hidden space-y-fluid-2">
             {filteredClaimed.length === 0 ? (
               <div className="py-6 text-center text-slate-500 text-xs font-mono border border-dashed border-slate-800 rounded-fluid">
@@ -307,24 +336,22 @@ export const FoodCheckinPage: React.FC = () => {
                       </p>
                       <p className="text-xs text-cyan-400 break-token">{m.id}</p>
                     </div>
-                    <span className="shrink-0 px-2 py-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-2xs whitespace-nowrap">
-                      ✓ CLAIMED
+                    <span className={`shrink-0 px-2 py-1 rounded text-2xs font-bold ${
+                      m.food_preference === 'NON_VEG'
+                        ? 'bg-rose-950 text-rose-300 border border-rose-500/40'
+                        : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
+                    }`}>
+                      {m.food_preference === 'NON_VEG' ? '🍗 NON-VEG' : '🌱 VEG'}
                     </span>
                   </div>
 
-                  <div className="mt-fluid-2 pt-fluid-2 grid grid-cols-2 gap-fluid-2 border-t border-slate-800/60">
-                    <div className="min-w-0">
-                      <span className="block text-2xs text-slate-500">CLAIM TIME</span>
-                      <span className="block text-xs text-slate-300">
-                        {m.food_collected_at
-                          ? new Date(m.food_collected_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                          : 'Claimed'}
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="block text-2xs text-slate-500">PHONE</span>
-                      <span className="block text-xs text-slate-300 break-token">{m.phone}</span>
-                    </div>
+                  <div className="mt-fluid-2 pt-fluid-2 flex items-center justify-between border-t border-slate-800/60 text-xs">
+                    <span className="text-slate-500 text-2xs">
+                      {m.food_collected_at
+                        ? new Date(m.food_collected_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : 'Claimed'}
+                    </span>
+                    <span className="text-emerald-400 text-2xs font-bold">✓ 1-TIME MEAL ISSUED</span>
                   </div>
                 </div>
               ))
@@ -333,19 +360,16 @@ export const FoodCheckinPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Camera QR Modal */}
-      <CameraQRScannerModal
-        isOpen={isCameraOpen}
+      <CameraQRScannerModal title="Scan Food Token QR" isOpen={isCameraOpen}
         onClose={() => setIsCameraOpen(false)}
-        onScanSuccess={(scannedToken) => {
+        onScan={(scanned) => {
+          handleFoodCheckin(scanned);
           setIsCameraOpen(false);
-          handleFoodCheckin(scannedToken);
         }}
-        title="Scan Participant Passport for Lunch Token"
-        subtitle="Hold attendee Digital Passport QR within camera view"
       />
     </div>
   );
 };
 
 export default FoodCheckinPage;
+

@@ -2,8 +2,11 @@
   | 'SUPER_ADMIN' 
   | 'TREASURER'
   | 'EVENT_ADMIN' 
+  | 'EVENT_COORDINATOR'
   | 'ENTRY_STAFF' 
+  | 'GATE_ADMIN'
   | 'FOOD_STAFF' 
+  | 'FOOD_ADMIN'
   | 'CERTIFICATE_ADMIN';
 
 export interface AdminUser {
@@ -11,6 +14,7 @@ export interface AdminUser {
   name: string;
   email: string;
   role: AdminRole;
+  allowed_events?: string[];
   avatar?: string;
 }
 

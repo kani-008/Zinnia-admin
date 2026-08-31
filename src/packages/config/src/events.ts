@@ -1,280 +1,328 @@
-import { EventMission } from '../../types/src';
+﻿import { EventMission } from '@packages/types/src';
 
 export const OFFICIAL_MISSIONS: EventMission[] = [
-  // TECHNICAL EVENTS
+  // TECHNICAL EVENTS (01 - 05)
   {
-    id: 'msn-sys-recovery',
-    code: 'MSN-01',
-    mission_name: 'Operation: System Recovery',
+    id: 'debugging',
+    code: '01',
+    mission_name: 'DEBUGGING',
     title: 'Debugging',
+    tagline: 'Find. Fix. Conquer.',
     event_type: 'TECH',
     category: 'TECHNICAL',
     clearance_level: 'LEVEL 01',
     team_size_min: 1,
     team_size_max: 2,
-    schedule_time: '10:00 AM - 10:45 AM',
-    duration: '1 hr',
-    venue: 'Cyber Lab 01 (Newton Hall)',
-    description: 'Black Cipher has injected malicious anomalies into the core runtime engine. Agents must locate, diagnose, and patch critical syntax, memory, and logical faults before the countdown reaches zero.',
+    schedule_time: '11:00 AM - 12:30 PM',
+    duration: '1 hr 30 mins',
+    venue: 'Auditorium 1st floor',
+    description: 'Find bugs, identify system failures, fix faulty code, and restore the program to working condition. Test your logic and debugging skills against the clock.',
     rules: [
-      'Individual or team of 2 agents.',
-      'Languages supported: C, C++, Java, Python.',
-      'Total 3 rounds of escalating corrupted code snippets.',
-      'Internet access restricted; offline documentation available.'
+      'Team size: 1â€“2 members.',
+      'Languages: C, C++, Java, and Python.',
+      'Complete 2 rounds of debugging challenges.',
+      'Identify bugs, fix code, and determine correct outputs.',
+      'Round 1: Easy & Intermediate challenges.',
+      'Round 2: Intermediate & Hard challenges.',
+      'Complete the challenge within 60 minutes.'
     ],
     coordinators: [
-      { name: 'Dr. A. Senthil Kumar', role: 'Staff Lead', phone: '+91 98401 23456' },
-      { name: 'R. Kanishkar', role: 'Student Coordinator', phone: '+91 94451 98765' }
+      { name: 'Prabakaran D', role: 'STUDENT COORDINATOR', phone: '+91 63692 20453' },
+      { name: 'Deepakala', role: 'STUDENT COORDINATOR', phone: '+91 93425 60879' }
     ],
     prizes: {
-      first: '₹3,000 + CHRONOS Merit Badge',
-      second: '₹2,000 + Certificate of Excellence',
-      third: '₹1,000 + Certificate of Merit'
+      first: 'â‚¹3,000 + Merit Shield',
+      second: 'â‚¹2,000 + Certificate',
+      third: 'â‚¹1,000 + Certificate'
     },
-    status: 'AVAILABLE'
+    status: 'AVAILABLE',
+    icon_name: 'debug'
   },
   {
-    id: 'msn-oracle',
-    code: 'MSN-02',
-    mission_name: 'Operation: ORACLE',
-    title: 'AI Event',
-    event_type: 'TECH',
-    category: 'TECHNICAL',
-    clearance_level: 'LEVEL 02',
-    team_size_min: 1,
-    team_size_max: 2,
-    schedule_time: '11:15 AM - 12:15 PM',
-    duration: '1 hr',
-    venue: 'AI Research Arena (Turing Block)',
-    description: 'Decrypt Black Cipher neural weights. Test your proficiency in machine learning, prompt engineering, generative model tuning, and predictive pattern identification.',
-    rules: [
-      'Teams of 1 to 2 members.',
-      'Prompt engineering challenges and model anomaly diagnosis.',
-      'Highest accuracy benchmark in minimal iterations wins.'
-    ],
-    coordinators: [
-      { name: 'Prof. M. Priya', role: 'Staff Lead', phone: '+91 98402 34567' },
-      { name: 'S. Vignesh', role: 'Student Coordinator', phone: '+91 97890 12345' }
-    ],
-    prizes: {
-      first: '₹3,500 + AI Innovator Badge',
-      second: '₹2,000 + Runner-up Badge',
-      third: '₹1,000 + Recognition Certificate'
-    },
-    status: 'AVAILABLE'
-  },
-  {
-    id: 'msn-broken-records',
-    code: 'MSN-03',
-    mission_name: 'Operation: Broken Records',
-    title: 'Lost in SQL',
+    id: 'the-last-signal',
+    code: '02',
+    mission_name: 'THE LAST SIGNAL',
+    title: 'The Last Signal',
+    tagline: 'Decode. Transmit. Survive.',
     event_type: 'TECH',
     category: 'TECHNICAL',
     clearance_level: 'LEVEL 01',
     team_size_min: 1,
     team_size_max: 2,
-    schedule_time: '12:30 PM - 01:30 PM',
-    duration: '1 hr',
-    venue: 'Database Systems Lab (Babbage Wing)',
-    description: 'The Temporal Core overload corrupted relational archives across centuries. Write queries, join fractured temporal tables, reverse engineer schemas, and extract classified recovery records.',
+    schedule_time: '11:00 AM - 12:30 PM',
+    duration: '1 hr 30 mins',
+    venue: '104 class room',
+    description: 'Intercept, decrypt, and decode corrupted signal packets through cryptographic puzzles, packet analysis, and binary telemetry.',
     rules: [
-      'Individual or team of 2.',
-      'Dialects: PostgreSQL / MySQL.',
-      'Query optimization, complex subqueries, and cryptographic data extraction.'
+      'Team of 1 to 2 members.',
+      'Rounds of ciphers, steganography, and frequency analysis.',
+      'Internet access restricted to designated tools.',
+      'Tie-breaker based on completion speed.'
     ],
     coordinators: [
-      { name: 'Prof. K. Ramesh', role: 'Staff Lead', phone: '+91 98403 45678' },
-      { name: 'D. Harini', role: 'Student Coordinator', phone: '+91 98765 43210' }
+      { name: 'Abdul Razith', role: 'STUDENT COORDINATOR', phone: '+91 90470 57868' },
+      { name: 'Sri Karthika', role: 'STUDENT COORDINATOR', phone: '+91 93618 40633' }
     ],
     prizes: {
-      first: '₹3,000 + Data Archon Shield',
-      second: '₹2,000 + Excellence Certificate',
-      third: '₹1,000 + Merit Certificate'
+      first: 'â‚¹3,000 + Shield',
+      second: 'â‚¹2,000 + Certificate',
+      third: 'â‚¹1,000 + Certificate'
     },
-    status: 'AVAILABLE'
+    status: 'AVAILABLE',
+    icon_name: 'signal'
   },
   {
-    id: 'msn-infinity-protocol',
-    code: 'MSN-04',
-    mission_name: 'Operation: Infinity Protocol',
-    title: 'Infinity Challenge (Single event)',
+    id: 'lost-at-sql',
+    code: '03',
+    mission_name: 'LOST AT SQL',
+    title: 'Lost at SQL',
+    tagline: 'Query. Navigate. Extract.',
     event_type: 'TECH',
     category: 'TECHNICAL',
-    clearance_level: 'LEVEL 03',
+    clearance_level: 'LEVEL 01',
+    team_size_min: 1,
+    team_size_max: 2,
+    schedule_time: '01:30 PM - 03:00 PM',
+    duration: '1 hr 30 mins',
+    venue: 'CC2 lab',
+    description: 'Investigate the disappearance of Black Cipher. Search the database, connect hidden clues, and reconstruct the truth using SQL.',
+    rules: [
+      'Team size: 1â€“2 members.',
+      'Solve 15â€“20 SQL challenges.',
+      'Use database evidence to solve the case.',
+      'Complete the investigation within 60 minutes.'
+    ],
+    coordinators: [
+      { name: 'Vignesh', role: 'STUDENT COORDINATOR', phone: '+91 80154 91593' },
+      { name: 'Indhumathi', role: 'STUDENT COORDINATOR', phone: '+91 80729 51205' }
+    ],
+    prizes: {
+      first: 'â‚¹3,000 + Shield',
+      second: 'â‚¹2,000 + Certificate',
+      third: 'â‚¹1,000 + Certificate'
+    },
+    status: 'AVAILABLE',
+    icon_name: 'database'
+  },
+  {
+    id: 'gadget-codes',
+    code: '04',
+    mission_name: 'GADGET CODES',
+    title: 'Gadget Codes (Single event)',
+    tagline: 'Program. Wire. Automate.',
+    event_type: 'TECH',
+    category: 'TECHNICAL',
+    clearance_level: 'LEVEL 01',
+    is_single_event_only: true,
     team_size_min: 2,
-    team_size_max: 3,
-    is_single_event_only: true,
-    schedule_time: '10:00 AM - 01:30 PM',
+    team_size_max: 2,
+    schedule_time: '11:00 AM - 02:30 PM',
     duration: '3 hrs 30 mins',
-    venue: 'Main Innovation Center',
-    description: 'An elite, continuous, multi-stage marathon testing competitive algorithmic problem solving, rapid full-stack prototyping, and timeline crisis defense under extreme time pressure.',
+    venue: 'CC1 lab',
+    description: 'Compete through quizzes, coding challenges, and a puzzle hunt. Test your technical knowledge, coding skills, and teamwork to unlock the final challenge.',
     rules: [
-      'Teams of 2 to 3 members.',
-      'Participants registering for Infinity Protocol cannot clash with short technical events.',
-      'Includes 3 intense phases: Algorithm Forge, System Crash Survival, and Live Pitch.'
+      'Team size: 2 members.',
+      'Complete 3 challenging rounds.',
+      'Round 1: Technical Quiz.',
+      'Round 2: Team Coding Challenge with 30-second swaps.',
+      'Round 3: Solve puzzles and collect QR passcode fragments.',
+      'Arrange the fragments to unlock the final challenge.',
+      'Top-performing teams advance to the next round.',
+      'Complete all challenges within the given time.'
     ],
     coordinators: [
-      { name: 'Dr. V. Rajesh', role: 'Chief Adjudicator', phone: '+91 98404 56789' },
-      { name: 'A. Siddharth', role: 'Lead Architect', phone: '+91 91234 56789' }
+      { name: 'Muhammed Umer', role: 'STUDENT COORDINATOR', phone: '+91 94458 86230' },
+      { name: 'Swathi', role: 'STUDENT COORDINATOR', phone: '+91 93610 63211' }
     ],
     prizes: {
-      first: '₹6,000 + Grand Temporal Champion Trophy',
-      second: '₹4,000 + Runner-up Shield',
-      third: '₹2,000 + Certificate'
+      first: 'â‚¹3,500 + Shield',
+      second: 'â‚¹2,000 + Certificate',
+      third: 'â‚¹1,000 + Certificate'
     },
-    status: 'AVAILABLE'
+    status: 'AVAILABLE',
+    icon_name: 'circuit'
   },
   {
-    id: 'msn-mission-control',
-    code: 'MSN-05',
-    mission_name: 'Operation: Mission Control',
-    title: 'UI/UX Design (Single event)',
+    id: 'paper-presentation',
+    code: '05',
+    mission_name: 'PAPER PRESENTATION',
+    title: 'Paper Presentation',
+    tagline: 'Ideas that speak. Impact that lasts.',
     event_type: 'TECH',
     category: 'TECHNICAL',
-    clearance_level: 'LEVEL 02',
+    clearance_level: 'LEVEL 01',
     team_size_min: 1,
     team_size_max: 2,
-    is_single_event_only: true,
-    schedule_time: '10:30 AM - 01:00 PM',
-    duration: '2 hr 30 mins',
-    venue: 'Design & Graphics Studio (Lovelace Hub)',
-    description: 'Design the next-generation CHRONOS incident investigation dashboard or Black Cipher containment user interface with high usability, temporal micro-interactions, and visual fidelity.',
+    schedule_time: '11:00 AM - 03:00 PM',
+    duration: '4 hrs',
+    venue: 'IT & CSE Seminar Hall',
+    description: 'Present original research manuscripts, architectural discoveries, and innovative engineering paradigms before an esteemed panel of faculty judges.',
     rules: [
-      'Teams of 1 to 2.',
-      'Tools: Figma, Adobe XD, or Penpot.',
-      'Evaluation criteria: Aesthetic excellence, user journey, accessibility, and futuristic theme integration.'
+      'Teams of 1 to 2 participants.',
+      'Presentation duration: 8 mins presentation + 2 mins Q&A.',
+      'Topics: AI/ML, Cloud, Cyber Security, Web3, IoT, Big Data.',
+      'Standard IEEE slide format recommended.'
     ],
     coordinators: [
-      { name: 'Prof. S. Kavitha', role: 'Staff Lead', phone: '+91 98405 67890' },
-      { name: 'N. Keerthana', role: 'Student Lead', phone: '+91 93456 78901' }
+      { name: 'Kanishkar', role: 'STUDENT COORDINATOR', phone: '+91 87787 84819' },
+      { name: 'Karishma', role: 'STUDENT COORDINATOR', phone: '+91 84381 94881' }
     ],
     prizes: {
-      first: '₹3,500 + Creative Vanguard Trophy',
-      second: '₹2,000 + Certificate',
-      third: '₹1,000 + Certificate'
+      first: 'â‚¹3,500 + Shield',
+      second: 'â‚¹2,000 + Certificate',
+      third: 'â‚¹1,000 + Certificate'
     },
-    status: 'AVAILABLE'
+    status: 'AVAILABLE',
+    icon_name: 'presentation'
   },
 
-  // NON-TECHNICAL EVENTS
+  // NON-TECHNICAL EVENTS (06 - 09)
   {
-    id: 'msn-borderland-gce',
-    code: 'MSN-06',
-    mission_name: 'Borderland at GCE',
-    title: 'Borderland at GCE',
+    id: 'borderland-at-gcee',
+    code: '06',
+    mission_name: 'BORDERLAND @ GCEE',
+    title: 'Borderland @ Gcee',
+    tagline: 'Survive. Strategize. Dominate.',
     event_type: 'NON_TECH',
     category: 'NON_TECHNICAL',
     clearance_level: 'LEVEL 01',
     team_size_min: 2,
-    team_size_max: 4,
-    schedule_time: '10:45 AM - 01:00 PM',
-    duration: '2 hrs 15 minutes',
-    venue: 'Campus Open Quadrangle & Auditoriums',
-    description: 'Survive the mystery borderland. Solve physical and mental puzzles, decode cryptic coordinates across the campus, and escape before the timeline destabilizes.',
+    team_size_max: 2,
+    schedule_time: '12:00 PM - 03:00 PM',
+    duration: '3 hrs',
+    venue: '101, 102 class room',
+    description: 'Enter the Borderland, survive strategic mini-games, and outsmart rival teams. Clear Round 1 to extend your visa and enter the final Borderland Hunt.',
     rules: [
-      'Squads of 2 to 4 members.',
-      'Physical campus exploration with clues hidden in chronological checkpoints.',
-      'No property damage; strict adherence to campus safety protocols.'
+      'Team size: 2 members.',
+      'Round 1: Welcome to Borderland @ GCEE.',
+      'Complete 3 strategic mini-games.',
+      'Every decision affects your teamâ€™s leaderboard position.',
+      'Top-performing teams qualify for the next round.',
+      'Round 2: Borderland Hunt @ GCEE.',
+      'Solve clues, discover hidden paths, and complete challenges.',
+      'Teamwork, strategy, observation, and time management are essential.',
+      'No do-overs â€” every move counts.'
     ],
     coordinators: [
-      { name: 'K. Arvind', role: 'Station Master', phone: '+91 94567 89012' },
-      { name: 'M. Divya', role: 'Tactical Coordinator', phone: '+91 95678 90123' }
+      { name: 'Praveenraja', role: 'STUDENT COORDINATOR', phone: '+91 63822 79383' },
+      { name: 'Kaviyasri', role: 'STUDENT COORDINATOR', phone: '+91 76393 67928' }
     ],
     prizes: {
-      first: '₹3,000 + Survivalist Medals',
-      second: '₹2,000 + Certificates',
-      third: '₹1,000 + Certificates'
+      first: 'â‚¹2,500 + Trophy',
+      second: 'â‚¹1,500 + Certificate',
+      third: 'â‚¹1,000 + Certificate'
     },
-    status: 'AVAILABLE'
+    status: 'AVAILABLE',
+    icon_name: 'gaming'
   },
   {
-    id: 'msn-think-strike-win',
-    code: 'MSN-07',
-    mission_name: 'Think, Strike and Win',
-    title: 'Think, Strike and Win',
+    id: 'think-strike-and-win',
+    code: '07',
+    mission_name: 'THINK, STRIKE AND WIN',
+    title: 'Think,Strike and Win',
+    tagline: 'Think fast. Strike sharp. Win all.',
     event_type: 'NON_TECH',
     category: 'NON_TECHNICAL',
     clearance_level: 'LEVEL 01',
     team_size_min: 2,
-    team_size_max: 3,
-    schedule_time: '11:00 AM - 12:00 PM',
-    duration: '1 hr',
-    venue: 'Seminar Hall B',
-    description: 'Fast-paced buzzer quiz and strategic thinking face-off spanning general tech trivia, pop culture temporal paradoxes, logic puzzles, and rapid reaction rounds.',
+    team_size_max: 2,
+    schedule_time: '12:00 PM - 02:30 PM',
+    duration: '2 hrs 30 mins',
+    venue: '103 class room',
+    description: 'Challenge your logic, observation, and general knowledge through three fast-paced rounds. Think smart, connect the clues, and identify the answer before time runs out.',
     rules: [
-      'Teams of 2 to 3 members.',
-      'Prelims followed by top 6 teams live buzzer faceoff.',
-      'Negative marks for false strikes in final round.'
+      'Team size: 2 members.',
+      'Round 1: Solve Logical & GK MCQs.',
+      'Round 2: Connect pictures and find the common link.',
+      'Round 3: Identify the mystery answer from clues.',
+      'Fewer clues mean higher points.',
+      'Fast and accurate answers score higher.',
+      'Teamwork and quick thinking are essential.'
     ],
     coordinators: [
-      { name: 'P. Balaji', role: 'Quizmaster', phone: '+91 96789 01234' },
-      { name: 'R. Sneha', role: 'Event Coordinator', phone: '+91 97890 12346' }
+      { name: 'Sivabalan', role: 'STUDENT COORDINATOR', phone: '+91 63845 11989' },
+      { name: 'Yogeshwari', role: 'STUDENT COORDINATOR', phone: '+91 90809 99795' }
     ],
     prizes: {
-      first: '₹2,500 + Quiz Laureate Shield',
-      second: '₹1,500 + Certificate',
-      third: '₹1,000 + Certificate'
+      first: 'â‚¹2,500 + Trophy',
+      second: 'â‚¹1,500 + Certificate',
+      third: 'â‚¹1,000 + Certificate'
     },
-    status: 'AVAILABLE'
+    status: 'AVAILABLE',
+    icon_name: 'target'
   },
   {
-    id: 'msn-plot-twist',
-    code: 'MSN-08',
-    mission_name: 'Plot Twist',
-    title: 'Plot Twist',
+    id: 'plot-twist',
+    code: '08',
+    mission_name: 'PLOT TWIST',
+    title: 'Plot twist',
+    tagline: 'Expect the unexpected.',
     event_type: 'NON_TECH',
     category: 'NON_TECHNICAL',
     clearance_level: 'LEVEL 01',
     team_size_min: 1,
     team_size_max: 2,
-    schedule_time: '12:00 PM - 01:00 PM',
-    duration: '1 hr',
-    venue: 'Media Studio / AV Hall',
-    description: 'A sudden unexpected story scenario is presented where reality has fractured. Craft the most clever, entertaining, or mind-bending continuation and resolution on the spot.',
+    schedule_time: '01:30 PM - 03:00 PM',
+    duration: '1 hr 30 mins',
+    venue: '103 class room',
+    description: 'Uncover the hidden twist by analyzing the story, solving clues, and connecting the evidence. Think fast, solve smart, and reach the Finale with the best advantage.',
     rules: [
-      'Solo or Duo participation.',
-      'Preparation time: 10 minutes; Performance/Presentation: 4 minutes.',
-      'Judged on creativity, coherence, dramatic timing, and audience engagement.'
+      'Team size: 1â€“2 members.',
+      'Complete 2 deduction rounds.',
+      'Each round lasts 30 minutes.',
+      'Clues are revealed at the 8- and 16-minute marks.',
+      'Hints are available after solving a mini-puzzle.',
+      'No elimination in Round 1.',
+      'Faster completion earns advantages for the Finale.',
+      'Finale rankings are decided by completion time.'
     ],
     coordinators: [
-      { name: 'G. Naveen', role: 'Drama & Narrative Lead', phone: '+91 98901 23456' },
-      { name: 'T. Ananya', role: 'Event Coordinator', phone: '+91 99012 34567' }
+      { name: 'Hariharan', role: 'STUDENT COORDINATOR', phone: '+91 88388 69405' },
+      { name: 'Akshaya', role: 'STUDENT COORDINATOR', phone: '+91 63818 83013' }
     ],
     prizes: {
-      first: '₹2,500 + Master of Narrative Award',
-      second: '₹1,500 + Certificate',
-      third: '₹1,000 + Certificate'
+      first: 'â‚¹2,500 + Trophy',
+      second: 'â‚¹1,500 + Certificate',
+      third: 'â‚¹1,000 + Certificate'
     },
-    status: 'AVAILABLE'
+    status: 'AVAILABLE',
+    icon_name: 'theater'
   },
   {
-    id: 'msn-short-film',
-    code: 'MSN-09',
-    mission_name: 'Short Film',
+    id: 'short-flim',
+    code: '09',
+    mission_name: 'SHORT FILM',
     title: 'Short Film',
+    tagline: 'Freeze moments. Frame stories.',
     event_type: 'NON_TECH',
     category: 'NON_TECHNICAL',
     clearance_level: 'LEVEL 01',
     team_size_min: 1,
-    team_size_max: 5,
-    schedule_time: '12:30 PM - 01:00 PM',
-    duration: '30 minutes',
-    venue: 'Main Auditorium Screen 01',
-    description: 'Screening and evaluation of original short films created by student creators exploring themes of artificial intelligence, future dystopia, temporal anomalies, or human connection.',
+    team_size_max: 2,
+    schedule_time: '01:30 PM â€“ 02:30 PM',
+    duration: '1 hr',
+    venue: 'Seminar Hall 2',
+    description: 'Create an original short film inspired by time, perspective, and self-doubt. Tell a meaningful story through visuals, characters, and emotions while keeping the narrative clear and engaging.',
     rules: [
-      'Runtime: 3 to 10 minutes.',
-      'Must contain original footage and audio/licensed score.',
-      'Submit MP4 format prior to deadline or deliver via flash drive during registration.'
+      'Maximum film duration: 8 minutes.',
+      'Individual or 2-member team participation is allowed.',
+      'The film must be based on one of the given themes.',
+      'Only original content is permitted; previously published films are not allowed.',
+      'Participants must have the rights to all music, footage, and other media used.',
+      'Offensive, discriminatory, or inappropriate content is not permitted.',
+      'Films will be judged based on story, creativity, direction, originality, and overall impact.'
     ],
     coordinators: [
-      { name: 'S. Karthik', role: 'Cinema Director', phone: '+91 90123 45678' },
-      { name: 'V. Meera', role: 'Screening Lead', phone: '+91 91234 56780' }
+      { name: 'Aswin Sanjeev Kumar', role: 'STUDENT COORDINATOR', phone: '+91 79040 98102' },
+      { name: 'Harshini', role: 'STUDENT COORDINATOR', phone: '+91 93634 52517' }
     ],
     prizes: {
-      first: '₹3,000 + Best Picture Golden Reel',
-      second: '₹2,000 + Runner-up Reel',
-      third: '₹1,000 + Special Mention Certificate'
+      first: 'â‚¹3,000 + Trophy',
+      second: 'â‚¹2,000 + Certificate',
+      third: 'â‚¹1,000 + Certificate'
     },
-    status: 'AVAILABLE'
+    status: 'AVAILABLE',
+    icon_name: 'camera'
   }
 ];
+

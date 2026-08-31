@@ -1,165 +1,151 @@
-import { 
-  Team,
-  TeamMember,
+﻿import { 
+  Team, 
+  TeamMember, 
   Participant, 
   EventMission, 
   AttendanceRecord, 
-  AdminRole,
   EventRegistration,
   PrizePosition,
   EventType,
-  HandBand
+  AdminRole
 } from '@packages/types/src';
 import { OFFICIAL_MISSIONS } from '@packages/config/src/events';
 import { generateTeamId, generateMemberId } from '@packages/utils/src/participant-id';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, isRealtimeEnabled } from '../lib/supabase';
+
+
 
 const STORAGE_KEYS = {
   TEAMS: 'zin26_live_teams_v2',
   MEMBERS: 'zin26_live_members_v2',
-  EVENTS: 'zin26_live_events_v2',
+  EVENTS: 'zin26_live_events_v6',
   REGISTRATIONS: 'zin26_live_registrations_v2',
   ATTENDANCE: 'zin26_live_attendance_v2',
-  HAND_BANDS: 'zin26_live_hand_bands_v2',
   CURRENT_TEAM: 'zin26_current_team_v2',
-  ADMIN_ROLE: 'zin26_admin_role_v2',
-  AUTH_USER: 'zin26_auth_user_v2'
+  ADMIN_ROLE: 'zin26_admin_active_role_v2',
+  AUTH_USER: 'zin26_admin_auth_user_v2'
 };
 
 class ZinniaStore {
   private listeners: Set<() => void> = new Set();
   private isSyncing = false;
+  private realTimeChannel: any = null;
 
   constructor() {
     this.cleanLegacyStorage();
     this.syncFromSupabase();
     this.setupRealtimeSubscription();
-    this.setupBroadcastSync();
-    if (typeof window !== 'undefined') {
-      setInterval(() => this.syncFromSupabase(), 4000);
-    }
   }
 
   private cleanLegacyStorage() {
     try {
-      ['zin26_participants_v3', 'zin26_attendance_v3', 'zin26_registrations_v3', 'zin26_live_participants_v1'].forEach(k => {
+      [
+        'zin26_participants_v3',
+        'zin26_attendance_v3',
+        'zin26_registrations_v3',
+        'zin26_live_participants_v1',
+        'zin26_live_events_v2',
+        'zin26_live_events_v3',
+        'zin26_live_events_v4',
+        'zin26_live_events_v5',
+        'zin26_live_hand_bands_v2'
+      ].forEach(k => {
         localStorage.removeItem(k);
       });
     } catch {}
   }
 
-  private setupBroadcastSync() {
+  private setupRealtimeSubscription() {
+    if (!isRealtimeEnabled()) return;
     try {
-      const bc = new BroadcastChannel('zin26_live_sync_channel');
-      bc.onmessage = (event) => {
-        if (event.data?.type === 'TEAM_REGISTERED' || event.data?.type === 'REGISTRATION_UPDATED') {
-          const { team, members } = event.data;
-          if (team) {
-            const currentTeams = this.getStorage<Team[]>(STORAGE_KEYS.TEAMS, []);
-            if (!currentTeams.some(t => t.team_id === team.team_id)) {
-              currentTeams.unshift(team);
-              this.setStorage(STORAGE_KEYS.TEAMS, currentTeams);
-            }
-          }
-          if (members && Array.isArray(members)) {
-            const currentMembers = this.getStorage<TeamMember[]>(STORAGE_KEYS.MEMBERS, []);
-            members.forEach((m: any) => {
-              if (!currentMembers.some(cm => cm.id === m.id)) {
-                currentMembers.push(m);
-              }
-            });
-            this.setStorage(STORAGE_KEYS.MEMBERS, currentMembers);
-          }
-          this.notifySubscribers();
-          this.syncFromSupabase();
-        }
-      };
-    } catch (e) {}
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('focus', () => this.syncFromSupabase());
-      window.addEventListener('storage', (e) => {
-        this.notifySubscribers();
-        this.syncFromSupabase();
-      });
+      this.realTimeChannel = supabase
+        .channel('admin-schema-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => this.syncFromSupabase())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, () => this.syncFromSupabase())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => this.syncFromSupabase())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'event_registrations' }, () => this.syncFromSupabase())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'team_payments' }, () => this.syncFromSupabase())
+        .subscribe();
+    } catch (err) {
+      console.warn('Realtime subscription error:', err);
     }
   }
 
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
+    return () => this.listeners.delete(listener);
   }
 
-  notifySubscribers() {
+  private notifySubscribers(): void {
     this.listeners.forEach(fn => {
-      try { fn(); } catch (e) { console.error('Listener error:', e); }
+      try { fn(); } catch (e) { console.error('Store listener error:', e); }
     });
   }
 
-  private setupRealtimeSubscription() {
-    if (!isSupabaseConfigured()) return;
-    try {
-      supabase
-        .channel('public_team_db_sync')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => this.syncFromSupabase())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, () => this.syncFromSupabase())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => this.syncFromSupabase())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => this.syncFromSupabase())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'event_registrations' }, () => this.syncFromSupabase())
-        .subscribe();
-    } catch (e) {
-      console.warn('Realtime subscription notice:', e);
-    }
-  }
-
-  async syncFromSupabase() {
+  // --- SYNC FROM SUPABASE ---
+  async syncFromSupabase(): Promise<void> {
     if (!isSupabaseConfigured() || this.isSyncing) return;
     this.isSyncing = true;
 
     try {
-      // 1. Fetch live teams
       const { data: dbTeams, error: tErr } = await supabase
         .from('teams')
         .select('*')
         .order('created_at', { ascending: false });
 
-      // 2. Fetch live team_members
       const { data: dbMembers, error: mErr } = await supabase
         .from('team_members')
         .select('*')
         .order('created_at', { ascending: true });
 
-      const currentTeams = this.getStorage<Team[]>(STORAGE_KEYS.TEAMS, []);
-      const currentMembers = this.getStorage<TeamMember[]>(STORAGE_KEYS.MEMBERS, []);
+      const localTeams = this.getStorage<Team[]>(STORAGE_KEYS.TEAMS, []);
+      const localMembers = this.getStorage<TeamMember[]>(STORAGE_KEYS.MEMBERS, []);
 
-      let mergedTeams: Team[] = [...currentTeams];
-      let mergedMembers: TeamMember[] = [...currentMembers];
-
-      if (!tErr && dbTeams && dbTeams.length > 0) {
-        dbTeams.forEach(dbt => {
-          const idx = mergedTeams.findIndex(t => t.team_id === dbt.team_id);
-          if (idx >= 0) {
-            mergedTeams[idx] = { ...mergedTeams[idx], ...dbt };
-          } else {
-            mergedTeams.push(dbt);
-          }
+      let mergedTeams = [...localTeams];
+      if (!tErr && dbTeams) {
+        dbTeams.forEach((dt: any) => {
+          const idx = mergedTeams.findIndex(lt => lt.team_id === dt.team_id);
+          const formatted: Team = {
+            team_id: dt.team_id,
+            team_name: dt.team_name,
+            college: dt.college,
+            department: dt.department,
+            year: dt.year,
+            registered_events: dt.registered_events || [],
+            payment: dt.payment || false,
+            payment_status: dt.payment_status || (dt.payment ? 'VERIFIED' : 'AWAITING_PAYMENT'),
+            utr_number: dt.utr_number,
+            created_at: dt.created_at,
+            updated_at: dt.updated_at
+          };
+          if (idx >= 0) mergedTeams[idx] = { ...mergedTeams[idx], ...formatted };
+          else mergedTeams.push(formatted);
         });
       }
 
-      if (!mErr && dbMembers && dbMembers.length > 0) {
-        dbMembers.forEach(dbm => {
-          const idx = mergedMembers.findIndex(m => m.id === dbm.id);
-          if (idx >= 0) {
-            mergedMembers[idx] = { ...mergedMembers[idx], ...dbm };
-          } else {
-            mergedMembers.push(dbm);
-          }
+      let mergedMembers = [...localMembers];
+      if (!mErr && dbMembers) {
+        dbMembers.forEach((dm: any) => {
+          const idx = mergedMembers.findIndex(lm => lm.id === dm.id);
+          const formatted: TeamMember = {
+            id: dm.id,
+            team_id: dm.team_id,
+            name: dm.name,
+            email: dm.email,
+            phone: dm.phone,
+            is_leader: dm.is_leader || false,
+            passport_token: dm.passport_token,
+            passport_issued_at: dm.passport_issued_at,
+            passport_sent_at: dm.passport_sent_at,
+            food_preference: dm.food_preference || 'VEG',
+            food_collected: dm.food_collected || false,
+            food_collected_at: dm.food_collected_at,
+            created_at: dm.created_at
+          };
+          if (idx >= 0) mergedMembers[idx] = { ...mergedMembers[idx], ...formatted };
+          else mergedMembers.push(formatted);
         });
       }
-
-
 
       mergedTeams = mergedTeams.map(t => ({
         ...t,
@@ -169,17 +155,40 @@ class ZinniaStore {
       this.setStorage(STORAGE_KEYS.TEAMS, mergedTeams);
       this.setStorage(STORAGE_KEYS.MEMBERS, mergedMembers);
 
-      // 3. Fetch live events
+      // Events
       const { data: dbEvents, error: eErr } = await supabase
         .from('events')
         .select('*')
         .order('code', { ascending: true });
 
       if (!eErr && dbEvents && dbEvents.length > 0) {
-        this.setStorage(STORAGE_KEYS.EVENTS, dbEvents);
+        const currentEvents = this.getStorage<EventMission[]>(STORAGE_KEYS.EVENTS, OFFICIAL_MISSIONS);
+        const mergedEvents = currentEvents.map(base => {
+          const matched = dbEvents.find(db => 
+            (db.code && db.code.toString().padStart(2, '0') === base.code) ||
+            (db.id && db.id.toLowerCase() === base.id.toLowerCase()) ||
+            (db.mission_name && db.mission_name.toLowerCase() === base.mission_name.toLowerCase()) ||
+            (db.title && db.title.toLowerCase() === base.title.toLowerCase())
+          );
+
+          if (matched) {
+            return {
+              ...base,
+              mission_name: matched.mission_name || matched.title || matched.name || base.mission_name,
+              title: matched.title || matched.mission_name || matched.name || base.title,
+              venue: matched.venue || base.venue,
+              schedule_time: matched.schedule_time || base.schedule_time,
+              status: matched.status || base.status,
+              description: matched.description || base.description,
+            };
+          }
+          return base;
+        });
+
+        this.setStorage(STORAGE_KEYS.EVENTS, mergedEvents);
       }
 
-      // 4. Fetch live event registrations
+      // Event registrations
       const { data: dbRegs, error: rErr } = await supabase
         .from('event_registrations')
         .select('*');
@@ -188,7 +197,7 @@ class ZinniaStore {
         this.setStorage(STORAGE_KEYS.REGISTRATIONS, dbRegs);
       }
 
-      // 5. Fetch live attendance
+      // Attendance
       const { data: dbAttendance, error: aErr } = await supabase
         .from('attendance')
         .select('*')
@@ -200,7 +209,7 @@ class ZinniaStore {
 
       this.notifySubscribers();
     } catch (e) {
-      console.warn('Supabase team sync notice:', e);
+      console.warn('Supabase sync notice:', e);
     } finally {
       this.isSyncing = false;
     }
@@ -256,61 +265,42 @@ class ZinniaStore {
     );
   }
 
-  getMemberByBandId(bandId: string): TeamMember | undefined {
-    const cleaned = bandId.trim().toUpperCase();
-    if (!cleaned) return undefined;
-    return this.getTeamMembers().find(m => m.band_id && m.band_id.toUpperCase() === cleaned);
-  }
-
   getMemberByEmail(email: string): TeamMember | undefined {
     const cleaned = email.trim().toLowerCase();
     return this.getTeamMembers().find(m => m.email.toLowerCase() === cleaned);
   }
 
-  // Unified lookup supporting Passport Token (QR), Team ID, Member ID, or Email
   lookupEntity(query: string): { team?: Team; member?: TeamMember; isTeamMatch?: boolean } {
     const cleaned = query.trim();
     if (!cleaned) return {};
 
-    // 1. By Secure Passport Token (Inside QR)
     const memberByToken = this.getMemberByPassportToken(cleaned);
     if (memberByToken) {
       const team = this.getTeamById(memberByToken.team_id);
       return { team, member: memberByToken };
     }
 
-    // 2. By Member ID (Manual ID Fallback)
     const memberById = this.getMemberById(cleaned);
     if (memberById) {
       const team = this.getTeamById(memberById.team_id);
       return { team, member: memberById };
     }
 
-    // 3. By Team ID
     const teamById = this.getTeamById(cleaned);
     if (teamById) {
       const leader = teamById.members?.find(m => m.is_leader) || teamById.members?.[0];
       return { team: teamById, member: leader, isTeamMatch: true };
     }
 
-    // 4. By Member Email
     const memberByEmail = this.getMemberByEmail(cleaned);
     if (memberByEmail) {
       const team = this.getTeamById(memberByEmail.team_id);
       return { team, member: memberByEmail };
     }
 
-    // 5. By Legacy Wristband ID (Fallback)
-    const memberByBand = this.getMemberByBandId(cleaned);
-    if (memberByBand) {
-      const team = this.getTeamById(memberByBand.team_id);
-      return { team, member: memberByBand };
-    }
-
     return {};
   }
 
-  // --- BACKWARD COMPATIBILITY ADAPTERS ---
   getParticipants(): Participant[] {
     const teams = this.getTeams();
     const result: Participant[] = [];
@@ -329,7 +319,8 @@ class ZinniaStore {
             year: team.year,
             registered_events: team.registered_events,
             payment: team.payment,
-            band_id: member.band_id,
+            payment_status: team.payment_status,
+            food_preference: member.food_preference,
             food_collected: member.food_collected,
             food_collected_at: member.food_collected_at,
             created_at: member.created_at,
@@ -348,6 +339,7 @@ class ZinniaStore {
           year: team.year,
           registered_events: team.registered_events,
           payment: team.payment,
+          payment_status: team.payment_status,
           created_at: team.created_at
         } as Participant);
       }
@@ -371,19 +363,14 @@ class ZinniaStore {
         year: team?.year || 'IV',
         registered_events: team?.registered_events || [],
         payment: team?.payment || false,
-        band_id: res.member.band_id,
+        payment_status: team?.payment_status,
+        food_preference: res.member.food_preference,
         food_collected: res.member.food_collected,
         food_collected_at: res.member.food_collected_at,
         created_at: res.member.created_at,
         members: team?.members
       } as Participant;
     }
-    return undefined;
-  }
-
-  getParticipantByBandId(bandId: string): Participant | undefined {
-    const member = this.getMemberByBandId(bandId);
-    if (member) return this.getParticipantByAgentId(member.id);
     return undefined;
   }
 
@@ -398,294 +385,30 @@ class ZinniaStore {
     if (local) return local;
 
     if (isSupabaseConfigured()) {
-      await this.syncFromSupabase();
-      return this.getParticipantByIdOrEmail(query);
+      const cleaned = query.trim();
+      const { data: memberData } = await supabase
+        .from('team_members')
+        .select('*')
+        .or(`id.eq.${cleaned},email.eq.${cleaned},passport_token.eq.${cleaned}`)
+        .limit(1);
+
+      if (memberData && memberData.length > 0) {
+        await this.syncFromSupabase();
+        return this.getParticipantByAgentId(memberData[0].id);
+      }
     }
     return undefined;
-  }
-
-  // --- TEAM REGISTRATION ---
-  async registerTeam(
-    teamData: Omit<Team, 'team_id' | 'created_at' | 'members' | 'payment'>,
-    members: { name: string; email: string; phone: string; is_leader: boolean }[]
-  ): Promise<Team> {
-    if (!members || members.length === 0) {
-      throw new Error('A team must contain at least one member.');
-    }
-
-    // Check duplicate emails
-    const existingMembers = this.getTeamMembers();
-    for (const m of members) {
-      const exists = existingMembers.find(em => em.email.toLowerCase() === m.email.toLowerCase());
-      if (exists) {
-        throw new Error(`Email "${m.email}" is already registered.`);
-      }
-    }
-
-    // Attempt server-side registration first for secure price calculation & event validation
-    try {
-      const serverRes = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          team_name: teamData.team_name,
-          college: teamData.college,
-          department: teamData.department,
-          year: teamData.year,
-          selected_event_ids: teamData.registered_events,
-          members: members.map((m, idx) => ({
-            name: m.name,
-            email: m.email,
-            phone: m.phone,
-            is_leader: m.is_leader || idx === 0
-          }))
-        })
-      });
-
-      const serverData = await serverRes.json();
-      if (!serverRes.ok || !serverData.success) {
-        throw new Error(serverData.message || serverData.error_code || 'Registration validation failed.');
-      }
-
-      const registeredTeam: Team = {
-        ...teamData,
-        team_id: serverData.team_id,
-        payment: false,
-        payment_status: serverData.payment_status || 'AWAITING_PAYMENT',
-        members: serverData.members,
-        created_at: new Date().toISOString()
-      };
-
-      // Update local storage state
-      const allTeams = this.getTeams();
-      allTeams.unshift(registeredTeam);
-      this.setStorage(STORAGE_KEYS.TEAMS, allTeams);
-
-      const allMembers = this.getTeamMembers();
-      if (serverData.members) {
-        allMembers.push(...serverData.members);
-        this.setStorage(STORAGE_KEYS.MEMBERS, allMembers);
-      }
-
-      this.setCurrentTeam(registeredTeam);
-      this.notifySubscribers();
-      return registeredTeam;
-    } catch (apiErr: any) {
-      if (apiErr.message && !apiErr.message.includes('fetch')) {
-        throw apiErr;
-      }
-      console.warn('Backend /api/register fallback:', apiErr);
-    }
-
-    const team_id = generateTeamId();
-    const now = new Date().toISOString();
-
-    const generateSecureToken = () => {
-      const bytes = new Uint8Array(16);
-      crypto.getRandomValues(bytes);
-      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    };
-
-    const newTeam: Team = {
-      ...teamData,
-      team_id,
-      payment: false,
-      payment_status: 'AWAITING_PAYMENT',
-      created_at: now
-    };
-
-    const newMembers: TeamMember[] = members.map((m, idx) => ({
-      id: generateMemberId(team_id, idx),
-      team_id,
-      name: m.name.trim(),
-      email: m.email.trim().toLowerCase(),
-      phone: m.phone.trim(),
-      is_leader: m.is_leader || idx === 0,
-      passport_token: generateSecureToken(),
-      passport_issued_at: now,
-      food_collected: false,
-      created_at: now
-    }));
-
-    newTeam.members = newMembers;
-
-    // Update local state
-    const allTeams = this.getTeams();
-    allTeams.unshift(newTeam);
-    this.setStorage(STORAGE_KEYS.TEAMS, allTeams);
-
-    const allMembers = this.getTeamMembers();
-    allMembers.push(...newMembers);
-    this.setStorage(STORAGE_KEYS.MEMBERS, allMembers);
-
-    this.setCurrentTeam(newTeam);
-
-    // Event Registrations
-    const registrations = this.getEventRegistrations();
-    teamData.registered_events.forEach(eventId => {
-      registrations.push({
-        event_id: eventId,
-        agent_id: team_id,
-        team_name: teamData.team_name,
-        position: null,
-        registered_at: now
-      });
-    });
-    this.setStorage(STORAGE_KEYS.REGISTRATIONS, registrations);
-
-    if (isSupabaseConfigured()) {
-      try {
-        const { error: teamErr } = await supabase.from('teams').insert([{
-          team_id: newTeam.team_id,
-          team_name: newTeam.team_name,
-          college: newTeam.college,
-          department: newTeam.department,
-          year: newTeam.year,
-          registered_events: newTeam.registered_events,
-          payment: false,
-          payment_status: 'AWAITING_PAYMENT'
-        }]);
-
-        if (teamErr) {
-          console.warn('Supabase teams insert warning (RLS/Permissions):', teamErr.message);
-        } else {
-          const memberRows = newMembers.map(m => ({
-            id: m.id,
-            team_id: m.team_id,
-            name: m.name,
-            email: m.email,
-            phone: m.phone,
-            is_leader: m.is_leader,
-            passport_token: m.passport_token,
-            passport_issued_at: m.passport_issued_at,
-            food_collected: false
-          }));
-          await supabase.from('team_members').insert(memberRows);
-
-          if (teamData.registered_events.length > 0) {
-            const regRows = teamData.registered_events.map(eventId => ({
-              team_id: newTeam.team_id,
-              event_id: eventId,
-              team_name: newTeam.team_name,
-              registered_at: now
-            }));
-            await supabase.from('event_registrations').insert(regRows);
-          }
-        }
-      } catch (e) {
-        console.warn('Supabase team registration error:', e);
-      }
-    }
-
-    this.notifySubscribers();
-    return newTeam;
-  }
-
-  // --- WRISTBAND PAIRING (Individual Member Level) ---
-  assignMemberBand(memberId: string, rawBandId: string): { success: boolean; message: string; member?: TeamMember } {
-    const bandId = rawBandId.trim().toUpperCase();
-    if (!bandId) {
-      return { success: false, message: 'Invalid Hand Band ID provided.' };
-    }
-
-    const members = this.getTeamMembers();
-    const member = members.find(m => m.id.toUpperCase() === memberId.trim().toUpperCase());
-    if (!member) {
-      return { success: false, message: `Member "${memberId}" not found.` };
-    }
-
-    // Check uniqueness across all members
-    const inUseByOther = members.find(
-      m => m.id.toUpperCase() !== member.id.toUpperCase() &&
-           m.band_id && m.band_id.toUpperCase() === bandId
-    );
-
-    if (inUseByOther) {
-      return {
-        success: false,
-        message: `Hand Band "${bandId}" is ALREADY ASSIGNED to ${inUseByOther.name} (${inUseByOther.id}).`
-      };
-    }
-
-    member.band_id = bandId;
-    this.setStorage(STORAGE_KEYS.MEMBERS, members);
-
-    if (isSupabaseConfigured()) {
-      supabase.from('team_members').update({ band_id: bandId }).eq('id', member.id).then();
-      supabase.from('hand_bands').upsert([{
-        band_id: bandId,
-        member_id: member.id,
-        team_id: member.team_id,
-        assigned_at: new Date().toISOString()
-      }]).then();
-    }
-
-    this.notifySubscribers();
-    return {
-      success: true,
-      message: `Hand Band ${bandId} linked to ${member.name}`,
-      member
-    };
-  }
-
-  removeMemberBand(memberId: string): { success: boolean; message: string; member?: TeamMember } {
-    const members = this.getTeamMembers();
-    const member = members.find(m => m.id.toUpperCase() === memberId.trim().toUpperCase());
-    if (!member) {
-      return { success: false, message: `Member "${memberId}" not found.` };
-    }
-
-    const previousBandId = member.band_id;
-    member.band_id = undefined;
-    this.setStorage(STORAGE_KEYS.MEMBERS, members);
-
-    if (isSupabaseConfigured()) {
-      supabase.from('team_members').update({ band_id: null }).eq('id', member.id).then();
-      if (previousBandId) {
-        supabase.from('hand_bands').delete().eq('band_id', previousBandId).then();
-      }
-      supabase.from('hand_bands').delete().eq('member_id', member.id).then();
-    }
-
-    this.notifySubscribers();
-    return { success: true, message: `Hand Band unlinked for ${member.name}`, member };
-  }
-
-  // Legacy assignBand adapter
-  assignBand(agentId: string, rawBandId: string): { success: boolean; message: string; participant?: Participant } {
-    const res = this.lookupEntity(agentId);
-    if (!res.member) {
-      return { success: false, message: `Attendee "${agentId}" not found.` };
-    }
-    const result = this.assignMemberBand(res.member.id, rawBandId);
-    return {
-      success: result.success,
-      message: result.message,
-      participant: result.member ? this.getParticipantByAgentId(result.member.id) : undefined
-    };
-  }
-
-  removeBand(agentId: string): { success: boolean; message: string; participant?: Participant } {
-    const res = this.lookupEntity(agentId);
-    if (!res.member) return { success: false, message: 'Attendee not found.' };
-    const result = this.removeMemberBand(res.member.id);
-    return {
-      success: result.success,
-      message: result.message,
-      participant: result.member ? this.getParticipantByAgentId(result.member.id) : undefined
-    };
   }
 
   // --- CHECK-IN LOGIC ---
   recordEntryCheckin(
     identifier: string,
     scannedBy = 'Gate Terminal',
-    assignBandId?: string,
     targetMemberId?: string
   ): { success: boolean; message: string; record?: AttendanceRecord; team?: Team; member?: TeamMember; participant?: Participant } {
     const lookup = this.lookupEntity(identifier);
     if (!lookup.team && !lookup.member) {
-      return { success: false, message: `Team / Member / Band ID "${identifier}" not found.` };
+      return { success: false, message: `Attendee ID or QR "${identifier}" not found.` };
     }
 
     const team = lookup.team || (lookup.member ? this.getTeamById(lookup.member.team_id) : undefined);
@@ -695,13 +418,6 @@ class ZinniaStore {
 
     if (!team || !member) {
       return { success: false, message: 'Could not resolve attendee team details.' };
-    }
-
-    if (assignBandId && assignBandId.trim()) {
-      const bandRes = this.assignMemberBand(member.id, assignBandId);
-      if (!bandRes.success) {
-        return { success: false, message: bandRes.message };
-      }
     }
 
     const attendance = this.getAttendance();
@@ -751,10 +467,9 @@ class ZinniaStore {
 
     this.notifySubscribers();
 
-    const bandInfo = member.band_id ? ` [Band: ${member.band_id}]` : '';
     return {
       success: true,
-      message: `Gate Entry granted for ${member.name} (${team.team_name})${bandInfo}`,
+      message: `Gate Entry granted for ${member.name} (${team.team_name})`,
       record,
       team,
       member,
@@ -768,7 +483,7 @@ class ZinniaStore {
   ): { success: boolean; message: string; member?: TeamMember; participant?: Participant } {
     const lookup = this.lookupEntity(identifier);
     if (!lookup.member) {
-      return { success: false, message: `Hand Band / Member ID "${identifier}" not recognized.` };
+      return { success: false, message: `Attendee ID or QR "${identifier}" not recognized.` };
     }
 
     const member = lookup.member;
@@ -780,7 +495,7 @@ class ZinniaStore {
         : 'earlier';
       return {
         success: false,
-        message: `FOOD ALREADY CLAIMED: ${member.name} claimed their meal at ${timeStr}.`
+        message: `FOOD ALREADY CLAIMED: ${member.name} claimed meal at ${timeStr}.`
       };
     }
 
@@ -818,7 +533,7 @@ class ZinniaStore {
   ): { success: boolean; message: string; record?: AttendanceRecord } {
     const lookup = this.lookupEntity(identifier);
     if (!lookup.member) {
-      return { success: false, message: `Hand Band / Member ID "${identifier}" not recognized.` };
+      return { success: false, message: `Attendee ID or QR "${identifier}" not recognized.` };
     }
 
     const member = lookup.member;
@@ -889,7 +604,7 @@ class ZinniaStore {
     };
   }
 
-  // --- ASYNC BACKEND API CHECK-IN HANDLERS ---
+  // --- API CHECK-IN HANDLERS ---
   async checkinEntryApi(params: {
     passport_token?: string;
     id?: string;
@@ -897,28 +612,29 @@ class ZinniaStore {
     location?: string;
   }): Promise<{ success: boolean; reason: string; member?: TeamMember; team?: Team }> {
     try {
-      const res = await fetch('/api/checkin/entry', {
+      const token = localStorage.getItem('admin_token') || '';
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch('/api/admin/checkin/entry', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(params)
       });
       const data = await res.json();
-      await this.syncFromSupabase();
+      if (data && data.success) {
+        await this.syncFromSupabase();
+      }
       return {
-        success: data.success ?? (res.status === 200),
-        reason: data.reason || (data.success ? 'Entry Verified' : 'Check-in failed'),
-        member: data.member,
-        team: data.team
+        success: data?.success ?? (res.status === 200),
+        reason: data?.reason || (data?.success ? 'Campus entry granted' : 'Check-in failed'),
+        member: data?.member,
+        team: data?.team
       };
     } catch (e: any) {
-      // Offline / local fallback
-      const tokenOrId = params.passport_token || params.id || '';
-      const localRes = this.recordEntryCheckin(tokenOrId, params.scanned_by || 'Gate Terminal');
       return {
-        success: localRes.success,
-        reason: localRes.message,
-        member: localRes.member,
-        team: localRes.team
+        success: false,
+        reason: e.message || 'Campus entry verification error.'
       };
     }
   }
@@ -931,27 +647,30 @@ class ZinniaStore {
     location?: string;
   }): Promise<{ success: boolean; reason: string; member?: TeamMember; team?: Team; registered_events?: any[] }> {
     try {
-      const res = await fetch('/api/checkin/event', {
+      const token = localStorage.getItem('admin_token') || '';
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch('/api/admin/checkin/event', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(params)
       });
       const data = await res.json();
-      await this.syncFromSupabase();
+      if (data && data.success) {
+        await this.syncFromSupabase();
+      }
       return {
-        success: data.success ?? (res.status === 200),
-        reason: data.reason || (data.success ? 'Event check-in verified' : 'Check-in failed'),
-        member: data.member,
-        team: data.team,
-        registered_events: data.registered_events
+        success: data?.success ?? (res.status === 200),
+        reason: data?.reason || (data?.success ? 'Event check-in verified' : 'Check-in rejected'),
+        member: data?.member,
+        team: data?.team,
+        registered_events: data?.registered_events
       };
     } catch (e: any) {
-      // Offline fallback
-      const tokenOrId = params.passport_token || params.id || '';
-      const localRes = this.recordEventCheckin(tokenOrId, params.event_id, params.scanned_by || 'Event Desk');
       return {
-        success: localRes.success,
-        reason: localRes.message
+        success: false,
+        reason: e.message || 'Event track check-in error.'
       };
     }
   }
@@ -961,29 +680,32 @@ class ZinniaStore {
     id?: string;
     scanned_by?: string;
     location?: string;
-  }): Promise<{ success: boolean; reason: string; member?: TeamMember; team?: Team }> {
+  }): Promise<{ success: boolean; reason: string; member?: TeamMember; team?: Team; food_preference?: 'VEG' | 'NON_VEG' }> {
     try {
-      const res = await fetch('/api/checkin/food', {
+      const token = localStorage.getItem('admin_token') || '';
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch('/api/admin/checkin/food', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(params)
       });
       const data = await res.json();
-      await this.syncFromSupabase();
+      if (data && data.success) {
+        await this.syncFromSupabase();
+      }
       return {
-        success: data.success ?? (res.status === 200),
-        reason: data.reason || (data.success ? 'Food token claimed' : 'Claim failed'),
-        member: data.member,
-        team: data.team
+        success: data?.success ?? (res.status === 200),
+        reason: data?.reason || (data?.success ? 'Food token claimed' : 'Claim failed'),
+        member: data?.member,
+        team: data?.team,
+        food_preference: data?.food_preference
       };
     } catch (e: any) {
-      // Offline fallback
-      const tokenOrId = params.passport_token || params.id || '';
-      const localRes = this.recordFoodDistribution(tokenOrId, params.scanned_by || 'Dining Counter');
       return {
-        success: localRes.success,
-        reason: localRes.message,
-        member: localRes.member
+        success: false,
+        reason: e.message || 'Food distribution service error.'
       };
     }
   }
@@ -997,8 +719,8 @@ class ZinniaStore {
       });
       const data = await res.json();
       return {
-        success: data.success ?? (res.status === 200),
-        message: data.message || (data.success ? 'Passport dispatched' : 'Dispatch failed')
+        success: data?.success ?? (res.status === 200),
+        message: data?.message || (data?.success ? 'Passport dispatched' : 'Dispatch failed')
       };
     } catch (e: any) {
       return {
@@ -1008,62 +730,39 @@ class ZinniaStore {
     }
   }
 
-  // --- PAYMENT APIS ---
-  async getPaymentStatusApi(teamId: string): Promise<{
-    success: boolean;
-    team_id?: string;
-    team_name?: string;
-    payment?: boolean;
-    payment_status?: string;
-    expected_amount?: number;
-    submitted_amount?: number;
-    utr_number?: string;
-    rejection_reason?: string;
-    message?: string;
-  }> {
+  // --- ADMIN PAYMENT APIS ---
+  async listAdminPaymentsApi(statusFilter?: string): Promise<any[]> {
     try {
-      const res = await fetch(`/api/payment/status?team_id=${teamId}`);
+      const token = localStorage.getItem('admin_token') || '';
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const url = statusFilter ? `/api/admin/payments?status=${statusFilter}` : '/api/admin/payments';
+      const res = await fetch(url, { headers });
       const data = await res.json();
-      return data;
+      return data.payments || [];
     } catch (e: any) {
-      return { success: false, message: e.message || 'Failed to fetch payment status.' };
+      console.warn('Failed to list payments:', e);
+      return [];
     }
   }
 
-  async submitPaymentApi(teamId: string, utrNumber: string, submittedAmount: number): Promise<{
-    success: boolean;
-    message?: string;
-    payment_status?: string;
-    error_code?: string;
-  }> {
-    try {
-      const res = await fetch('/api/payment/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          team_id: teamId,
-          utr_number: utrNumber,
-          submitted_amount: submittedAmount
-        })
-      });
-      const data = await res.json();
-      await this.syncFromSupabase();
-      return data;
-    } catch (e: any) {
-      return { success: false, message: e.message || 'Failed to submit payment.' };
-    }
-  }
+  async verifyAdminPaymentApi(teamId: string, adminId: string = 'Treasurer') { return this.verifyPaymentApi(teamId, adminId); }
 
-  async verifyAdminPaymentApi(teamId: string, adminId: string = 'admin_lead'): Promise<{
+  async verifyPaymentApi(teamId: string, adminId: string = 'Treasurer'): Promise<{
     success: boolean;
     message?: string;
     payment_status?: string;
   }> {
     try {
+      const token = localStorage.getItem('admin_token') || '';
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch('/api/admin/payments/verify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ team_id: teamId, admin_id: adminId })
+        headers,
+        body: JSON.stringify({ team_id: teamId, admin_name: adminId })
       });
       const data = await res.json();
       await this.syncFromSupabase();
@@ -1073,34 +772,26 @@ class ZinniaStore {
     }
   }
 
-  async rejectAdminPaymentApi(teamId: string, rejectionReason: string, adminId: string = 'admin_lead'): Promise<{
+  async rejectAdminPaymentApi(teamId: string, rejectionReason: string, adminId: string = 'Treasurer'): Promise<{
     success: boolean;
     message?: string;
     payment_status?: string;
   }> {
     try {
+      const token = localStorage.getItem('admin_token') || '';
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch('/api/admin/payments/reject', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ team_id: teamId, admin_id: adminId, rejection_reason: rejectionReason })
+        headers,
+        body: JSON.stringify({ team_id: teamId, reason: rejectionReason, admin_name: adminId })
       });
       const data = await res.json();
       await this.syncFromSupabase();
       return data;
     } catch (e: any) {
       return { success: false, message: e.message || 'Failed to reject payment.' };
-    }
-  }
-
-  async listAdminPaymentsApi(statusFilter?: string): Promise<any[]> {
-    try {
-      const url = statusFilter ? `/api/admin/payments/list?status=${statusFilter}` : '/api/admin/payments';
-      const res = await fetch(url);
-      const data = await res.json();
-      return data.payments || [];
-    } catch (e: any) {
-      console.warn('Failed to list payments:', e);
-      return [];
     }
   }
 
@@ -1153,17 +844,12 @@ class ZinniaStore {
 
     if (isSupabaseConfigured()) {
       try {
-        // Delete child table records first to prevent Foreign Key constraint conflicts (409 Conflict)
         await supabase.from('event_registrations').delete().eq('team_id', id);
         await supabase.from('team_payments').delete().eq('team_id', id);
-        await supabase.from('hand_bands').delete().eq('team_id', id);
-        await supabase.from('hand_bands').delete().eq('member_id', id);
         await supabase.from('attendance').delete().eq('team_id', id);
         await supabase.from('attendance').delete().eq('member_id', id);
         await supabase.from('team_members').delete().eq('team_id', id);
         await supabase.from('team_members').delete().eq('id', id);
-
-        // Delete parent team row last
         await supabase.from('teams').delete().eq('team_id', id);
       } catch (err) {
         console.warn('Supabase delete team error:', err);
@@ -1173,15 +859,7 @@ class ZinniaStore {
     this.notifySubscribers();
   }
 
-  // --- CURRENT USER & ADMIN ROLE ---
-  getCurrentTeam(): Team | null {
-    return this.getStorage(STORAGE_KEYS.CURRENT_TEAM, null);
-  }
-
-  setCurrentTeam(team: Team | null): void {
-    this.setStorage(STORAGE_KEYS.CURRENT_TEAM, team);
-  }
-
+  // --- AUTHENTICATION & ROLE MANAGEMENT ---
   getAdminRole(): AdminRole {
     return this.getStorage(STORAGE_KEYS.ADMIN_ROLE, 'SUPER_ADMIN');
   }
@@ -1190,9 +868,6 @@ class ZinniaStore {
     this.setStorage(STORAGE_KEYS.ADMIN_ROLE, role);
   }
 
-
-
-  // --- AUTHENTICATION ---
   async loginAdminApi(username: string, password: string): Promise<{
     success: boolean;
     message?: string;
@@ -1203,11 +878,14 @@ class ZinniaStore {
       const res = await fetch('/api/admin/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), email: username.trim(), password: password.trim() })
+        body: JSON.stringify({ username: username.trim(), password: password.trim() })
       });
       const data = await res.json();
       if (data.success && data.user) {
         this.setStorage(STORAGE_KEYS.AUTH_USER, data.user);
+        if (data.token) {
+          localStorage.setItem('admin_token', data.token);
+        }
         if (data.user.role) {
           this.setAdminRole(data.user.role);
         }
@@ -1221,6 +899,7 @@ class ZinniaStore {
 
   logoutAdmin(): void {
     localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
+    localStorage.removeItem('admin_token');
     this.notifySubscribers();
   }
 
@@ -1234,3 +913,5 @@ class ZinniaStore {
 }
 
 export const store = new ZinniaStore();
+
+
